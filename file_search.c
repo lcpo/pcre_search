@@ -71,7 +71,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  printf("\nMatch succeeded at offset %d\n", ovector[0]);
+  printf("Match succeeded at offset %d\n", ovector[0]);
 
   if(rc==0) // ovector wasn't big enough, handle error case
   {
