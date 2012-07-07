@@ -47,8 +47,10 @@ int main(int argc, char **argv)
 {
 pcre *re;
 const char *error;
+
 char *pattern;
 char *subject;
+
 unsigned char *name_table;
 unsigned int option_bits;
 int erroffset;
