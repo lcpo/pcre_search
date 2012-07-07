@@ -88,6 +88,24 @@ int main(int argc, char **argv) {
     printf("%2d: %.*s\n", i, substring_length, substring_start);
   }
 
+  //XXX get_named_substring
+
+  const char *named_substring = "ops";
+  const char *matched_substring = NULL;
+
+  int rs = pcre_get_named_substring(
+    re,
+    file_buffer,
+    ovector,
+    rc,
+    named_substring,
+    &matched_substring);
+
+  if(rs<0) { fprintf(stderr,"error: named substring %s not found\n",named_substring); return 1; }
+
+  printf("substring match for %s: %s\n",named_substring,matched_substring);
+  pcre_free_substring(matched_substring);
+
   // cleanup
   free(file_buffer);
   close(file);
