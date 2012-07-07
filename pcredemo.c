@@ -379,6 +379,20 @@ for (;;)
   /* As before, show substrings stored in the output vector by number, and then
   also any named substrings. */
 
+  (void)pcre_fullinfo(
+    re,                       /* the compiled pattern */
+    NULL,                     /* no extra data - we didn't study the pattern */
+    PCRE_INFO_NAMETABLE,      /* address of the table */
+    &name_table);             /* where to put the answer */
+
+  (void)pcre_fullinfo(
+    re,                       /* the compiled pattern */
+    NULL,                     /* no extra data - we didn't study the pattern */
+    PCRE_INFO_NAMEENTRYSIZE,  /* size of each entry in the table */
+    &name_entry_size);        /* where to put the answer */
+
+
+
   for (i = 0; i < rc; i++)
     {
     char *substring_start = subject + ovector[2*i];
