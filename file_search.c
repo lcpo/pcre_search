@@ -1,26 +1,41 @@
-#include <stdio.h>  // file/stream IO
-#include <stdlib.h> // calloc,free
+#include <stdio.h>  // io
+#include <stdlib.h> // calloc,free,etc.
 #include <string.h> // strlen
+#include <fcntl.h>  // lseek,open,close,etc.
 #include <pcre.h>
 
 #define OVECCOUNT 30 // should be multiple of 3
 
 int main(int argc, char **argv) {
 
-  if(argc<3) { puts("usage: file_search <file> <pattern>"); return 1; }
+  // check cli args
+  if(argc<4)
+  {
+    puts("usage: file_search <file> <pattern> <named substring>");
+    return 1;
+  }
 
-  FILE *file = fopen(argv[1], "r");
-  if(file==NULL) { fprintf(stderr, "error: could not open file"); return 1; }
-  
-  fseek(file, 0L, SEEK_END);        // seek to EOF
-  size_t file_length = ftell(file); // store EOF pos
-  rewind(file);
+  int fd,file_length;
+  char *file_buffer;
+
+  // open file
+  if((fd = open(argv[1], O_RDONLY)) == -1)
+  {
+    fprintf(stderr, "error: could not open file");
+    return 1;
+  }
+
+  // seek to EOF, store length
+  file_length = lseek(fd, -1, SEEK_END);
+  // seek back to start of file
+  lseek(fd, 0, SEEK_SET);
 
   // allocate and zero file buffer
-  char *file_buffer = calloc(file_length + 1, sizeof(char));
+  file_buffer = calloc(file_length + 1, sizeof(char));
 
   // read file into buffer
-  fread(file_buffer, file_length, 1, file);
+  read(fd, file_buffer, file_length);
+  close(fd);
 
   ///////////////////////////////////////
   // Do something with the file_buffer //
@@ -71,13 +86,14 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  printf("Match succeeded at offset %d\n", ovector[0]);
-
   if(rc==0) // ovector wasn't big enough, handle error case
   {
     rc = OVECCOUNT/3;
     fprintf(stderr,"error: ovector only has room for %d substrings\n", rc-1);
   }
+
+  #ifdef DEBUG
+  printf("Match succeeded at offset %d\n", ovector[0]);
 
   // Show substrings stored in output vector
   int i;
@@ -87,10 +103,11 @@ int main(int argc, char **argv) {
     int substring_length = ovector[2*i+1] - ovector[2*i];
     printf("%2d: %.*s\n", i, substring_length, substring_start);
   }
+  #endif
 
   //XXX get_named_substring
 
-  const char *named_substring = "ops";
+  const char *named_substring = argv[3];
   const char *matched_substring = NULL;
 
   int rs = pcre_get_named_substring(
@@ -108,7 +125,7 @@ int main(int argc, char **argv) {
 
   // cleanup
   free(file_buffer);
-  close(file);
+  pcre_free(re);
 
   return 0;
 }
