@@ -6,6 +6,19 @@
 
 #define OVECCOUNT 30 // should be multiple of 3
 
+struct pcre_container {
+  char *buffer;
+  int buffer_length;
+  char *pattern;
+  pcre *re;
+  const char *error;
+  int erroroffset;
+  int rc;
+  int ovector[OVECCOUNT];
+} p;
+
+struct pcre_container *pcre_info = &p;
+
 int main(int argc, char **argv) {
 
   // check cli args
@@ -37,6 +50,10 @@ int main(int argc, char **argv) {
   read(fd, file_buffer, file_length);
   close(fd);
 
+  // set our pcre_info buffer
+  pcre_info->buffer = file_buffer;
+  pcre_info->buffer_length = file_length;
+
   ///////////////////////////////////////
   // Do something with the file_buffer //
   ///////////////////////////////////////
@@ -45,76 +62,70 @@ int main(int argc, char **argv) {
   // printf("strlen(file_buffer) = %d\n", (int)strlen(file_buffer));
   // printf("        file_length = %d\n", (int)file_length);
 
-  char *pattern = argv[2];
-  pcre *re;
-  const char *error;
-  int  erroroffset;
+  pcre_info->pattern = argv[2];
 
-  re = pcre_compile(
-    pattern,       // the pattern :)
-    0,             // default options
-    &error,        // for errror message
-    &erroroffset,  // for error offset
+  pcre_info->re = pcre_compile(
+    pcre_info->pattern,         // the pattern :)
+    0,                          // default options
+    &(pcre_info->error),        // for errror message
+    &(pcre_info->erroroffset),  // for error offset
     NULL);
 
-  if(re==NULL) // regex compile failed, handle error case
+  if(pcre_info->re==NULL) // regex compile failed, handle error case
   {
-    fprintf(stderr, "error: PCRE compile failed at offset %d: %s\n", erroroffset, error);
+    fprintf(stderr, "error: PCRE compile failed at offset %d: %s\n", pcre_info->erroroffset, pcre_info->error);
     return 1;
   }
 
-  int rc;
-  int ovector[OVECCOUNT];
-  rc = pcre_exec(
-    re,            // the compiled pattern
-    NULL,          // no extra data
-    file_buffer,   // the file_buffer
-    file_length,   // file length
-    0,             // start at offset 0 in file_buffer
-    0,             // default options
-    ovector,       // output vector for substring info
+  pcre_info->rc = pcre_exec(
+    pcre_info->re,            // the compiled pattern
+    NULL,                     // no extra data
+    pcre_info->buffer,        // the file_buffer
+    pcre_info->buffer_length, // file length
+    0,                        // start at offset 0 in file_buffer
+    0,                        // default options
+    pcre_info->ovector,       // output vector for substring info
     OVECCOUNT);
 
-  if(rc<0) // match failed, handle error cases
+  if(pcre_info->rc<0) // match failed, handle error cases
   {
-    switch(rc)
+    switch(pcre_info->rc)
     {
       case PCRE_ERROR_NOMATCH: puts("No match."); break;
       default: fprintf(stderr,"error: matching error."); break;
     }
-    pcre_free(re);
+    pcre_free(pcre_info->re);
     return 1;
   }
 
-  if(rc==0) // ovector wasn't big enough, handle error case
+  if(pcre_info->rc==0) // ovector wasn't big enough, handle error case
   {
-    rc = OVECCOUNT/3;
-    fprintf(stderr,"error: ovector only has room for %d substrings\n", rc-1);
+    pcre_info->rc = OVECCOUNT/3;
+    fprintf(stderr,"error: ovector only has room for %d substrings\n", (pcre_info->rc)-1);
   }
 
   #ifdef DEBUG
-  printf("Match succeeded at offset %d\n", ovector[0]);
+  printf("Match succeeded at offset %d\n", pcre_info->ovector[0]);
 
   // Show substrings stored in output vector
   int i;
-  for(i=0;i<rc;i++)
+  for(i=0;i<(pcre_info->rc);i++)
   {
-    char *substring_start = file_buffer + ovector[2*i];
-    int substring_length = ovector[2*i+1] - ovector[2*i];
+    char *substring_start = pcre_info->buffer + pcre_info->ovector[2*i];
+    int substring_length = pcre_info->ovector[2*i+1] - pcre_info->ovector[2*i];
     printf("%2d: %.*s\n", i, substring_length, substring_start);
   }
   #endif
 
   //XXX get_named_substring
 
-  const char *named_substring = argv[3];
-  const char *matched_substring = NULL;
-
+  const char *named_substring=argv[3];
+  const char *matched_substring=NULL;
   int rs = pcre_get_named_substring(
-    re,
-    file_buffer,
-    ovector,
-    rc,
+    pcre_info->re,
+    pcre_info->buffer,
+    pcre_info->ovector,
+    pcre_info->rc,
     named_substring,
     &matched_substring);
 
@@ -124,8 +135,8 @@ int main(int argc, char **argv) {
   pcre_free_substring(matched_substring);
 
   // cleanup
-  free(file_buffer);
-  pcre_free(re);
+  free(pcre_info->buffer);
+  pcre_free(pcre_info->re);
 
   return 0;
 }
