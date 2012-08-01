@@ -19,6 +19,8 @@ struct pcre_container {
 
 struct pcre_container *pcre_info = &p;
 
+char *fetch_named_substring(const char *named_substring, struct pcre_container *pcre_info, int rs);
+
 int main(int argc, char **argv) {
 
   // check cli args
@@ -120,23 +122,33 @@ int main(int argc, char **argv) {
   //XXX get_named_substring
 
   const char *named_substring=argv[3];
-  const char *matched_substring=NULL;
-  int rs = pcre_get_named_substring(
-    pcre_info->re,
-    pcre_info->buffer,
-    pcre_info->ovector,
-    pcre_info->rc,
-    named_substring,
-    &matched_substring);
+  int rs=0;
+  char *return_substring = fetch_named_substring(named_substring, pcre_info, rs);
 
   if(rs<0) { fprintf(stderr,"error: named substring %s not found\n",named_substring); return 1; }
 
-  printf("substring match for %s: %s\n",named_substring,matched_substring);
-  pcre_free_substring(matched_substring);
+  printf("substring match for %s: %s\n",named_substring,return_substring);
+
+  free(return_substring);
 
   // cleanup
   free(pcre_info->buffer);
   pcre_free(pcre_info->re);
 
   return 0;
+}
+
+char *fetch_named_substring(const char *named_substring, struct pcre_container *pcre_info, int rs)
+{
+  const char *matched_substring = NULL;
+  rs = pcre_get_named_substring(
+    pcre_info->re,
+    pcre_info->buffer,
+    pcre_info->ovector,
+    pcre_info->rc,
+    named_substring,
+    &matched_substring);
+  char *return_substring = strdup(matched_substring);
+  pcre_free_substring(matched_substring);
+  return return_substring;
 }
