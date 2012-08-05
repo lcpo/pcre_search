@@ -21,7 +21,7 @@ struct pcre_container {
 
 struct pcre_container *pcre_info = &p;
 
-int pcre_exec_single(struct pcre_container *pcre_info)
+int pcre_exec_single(struct pcre_container *pcre_info, void (*pcre_match_callback)())
 {
   pcre_info->re = pcre_compile(
     pcre_info->pattern,         // the pattern :)
@@ -70,6 +70,48 @@ int pcre_exec_single(struct pcre_container *pcre_info)
   NULL,
   PCRE_INFO_NAMECOUNT,
   &(pcre_info->namecount));
+
+  pcre_match_callback(pcre_info);
+
+  #ifdef DEBUG
+    printf("Match succeeded at offset %d\n", pcre_info->ovector[0]);
+
+    // Show substrings stored in output vector
+    int i;
+    for(i=0;i<(pcre_info->rc);i++)
+    {
+      char *substring_start = pcre_info->buffer + pcre_info->ovector[2*i];
+      int substring_length = pcre_info->ovector[2*i+1] - pcre_info->ovector[2*i];
+      printf("%2d: %.*s\n", i, substring_length, substring_start);
+    }
+    if(pcre_info->namecount > 0)
+    {
+      int name_entry_size;
+
+      (void)pcre_fullinfo(
+      pcre_info->re,            // the compiled pattern
+      NULL,                     // no extra data - we didn't study the pattern
+      PCRE_INFO_NAMEENTRYSIZE,  // size of each entry in the table
+      &name_entry_size);        // where to put the answer
+      unsigned char *name_table;
+
+      (void)pcre_fullinfo(
+      pcre_info->re,            // the compiled pattern
+      NULL,                     // no extra data - we didn't study the pattern
+      PCRE_INFO_NAMETABLE,      // address of the table
+      &name_table);             // where to put the answer
+
+      unsigned char *tabptr = name_table;
+      printf("Named substrings\n");
+      for (i = 0; i < pcre_info->namecount; i++)
+      {
+        int n = (tabptr[0] << 8) | tabptr[1];
+        printf("(%d) %*s: %.*s\n", n, name_entry_size - 3, tabptr + 2,
+          pcre_info->ovector[2*n+1] - pcre_info->ovector[2*n], pcre_info->buffer + pcre_info->ovector[2*n]);
+        tabptr += name_entry_size;
+      }
+    }
+  #endif
 
   return 0;
 }
@@ -142,54 +184,13 @@ int main(int argc, char **argv) {
   pcre_info->named_substring = argv[3]; // set named substring
 
 
-  if(pcre_exec_single(pcre_info) > 0)
+  if(pcre_exec_single(pcre_info,pcre_match_callback) > 0)
   {
     free(file_buffer);
     return 1;
   }
 
-  pcre_match_callback(pcre_info);
 
-
-  #ifdef DEBUG
-    printf("Match succeeded at offset %d\n", pcre_info->ovector[0]);
-
-    // Show substrings stored in output vector
-    int i;
-    for(i=0;i<(pcre_info->rc);i++)
-    {
-      char *substring_start = pcre_info->buffer + pcre_info->ovector[2*i];
-      int substring_length = pcre_info->ovector[2*i+1] - pcre_info->ovector[2*i];
-      printf("%2d: %.*s\n", i, substring_length, substring_start);
-    }
-    if(pcre_info->namecount > 0)
-    {
-      int name_entry_size;
-
-      (void)pcre_fullinfo(
-      pcre_info->re,            // the compiled pattern
-      NULL,                     // no extra data - we didn't study the pattern
-      PCRE_INFO_NAMEENTRYSIZE,  // size of each entry in the table
-      &name_entry_size);        // where to put the answer
-      unsigned char *name_table;
-
-      (void)pcre_fullinfo(
-      pcre_info->re,            // the compiled pattern
-      NULL,                     // no extra data - we didn't study the pattern
-      PCRE_INFO_NAMETABLE,      // address of the table
-      &name_table);             // where to put the answer
-
-      unsigned char *tabptr = name_table;
-      printf("Named substrings\n");
-      for (i = 0; i < pcre_info->namecount; i++)
-      {
-        int n = (tabptr[0] << 8) | tabptr[1];
-        printf("(%d) %*s: %.*s\n", n, name_entry_size - 3, tabptr + 2,
-          pcre_info->ovector[2*n+1] - pcre_info->ovector[2*n], pcre_info->buffer + pcre_info->ovector[2*n]);
-        tabptr += name_entry_size;
-      }
-    }
-  #endif
 
 
 
