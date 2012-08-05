@@ -7,29 +7,102 @@
 #define OVECCOUNT 30 // should be multiple of 3
 
 struct pcre_container {
-  char *buffer;
-  int buffer_length;
-  char *pattern;
-  pcre *re;
-  const char *error;
-  int erroroffset;
-  int rc;
-  int ovector[OVECCOUNT];
+  char *buffer;                 // subject buffer
+  int buffer_length;            // subject buffer length
+  char *pattern;                // pattern
+  pcre *re;                     // the regex
+  const char *error;            // error
+  int erroroffset;              // error offset
+  int namecount;                // named substring match count
+  const char *named_substring;  // the named substring
+  int rc;                       // result count ?
+  int ovector[OVECCOUNT];       // output vector
 } p;
 
 struct pcre_container *pcre_info = &p;
 
+int pcre_exec_single(struct pcre_container *pcre_info)
+{
+  pcre_info->re = pcre_compile(
+    pcre_info->pattern,         // the pattern :)
+    0,                          // default options
+    &(pcre_info->error),        // for errror message
+    &(pcre_info->erroroffset),  // for error offset
+    NULL);
+
+  if(pcre_info->re==NULL) // regex compile failed, handle error case
+  {
+    fprintf(stderr, "error: PCRE compile failed at offset %d: %s\n", pcre_info->erroroffset, pcre_info->error);
+    return 1;
+  }
+
+  pcre_info->rc = pcre_exec(
+    pcre_info->re,              // the compiled pattern
+    NULL,                       // no extra data
+    pcre_info->buffer,          // the buffer
+    pcre_info->buffer_length,   // file length
+    0,                          // start at offset 0 in file_buffer
+    0,                          // default options
+    pcre_info->ovector,         // output vector for substring info
+    OVECCOUNT);
+
+  if(pcre_info->rc<0) // match failed, handle error cases
+  {
+    switch(pcre_info->rc)
+    {
+      case PCRE_ERROR_NOMATCH: puts("No match."); break;
+      default: fprintf(stderr,"error: matching error."); break;
+    }
+    pcre_free(pcre_info->re);
+    return 1;
+  }
+
+  if(pcre_info->rc==0) // ovector wasn't big enough, handle error case
+  {
+    pcre_info->rc = OVECCOUNT/3;
+    fprintf(stderr,"error: ovector only has room for %d substrings\n", (pcre_info->rc)-1);
+    pcre_free(pcre_info->re);
+    return 1;
+  }
+
+  (void)pcre_fullinfo(
+  pcre_info->re,
+  NULL,
+  PCRE_INFO_NAMECOUNT,
+  &(pcre_info->namecount));
+
+  return 0;
+}
+
+
 int fetch_named_substring(const char *named_substring, struct pcre_container *pcre_info, const char **matched_substring)
 {
   int rs = pcre_get_named_substring(
-    pcre_info->re,
-    pcre_info->buffer,
-    pcre_info->ovector,
+    pcre_info->re,      // regex
+    pcre_info->buffer,  // buffer
+    pcre_info->ovector, // output vector
     pcre_info->rc,
-    named_substring,
-    matched_substring);
+    named_substring,    // the named substring i.e. (?P<str>)
+    matched_substring); // the named substring's match
   return rs;
 }
+
+// custom callback function to exec on each match
+void pcre_match_callback(struct pcre_container *pcre_info)
+{
+  // get_named_substring if it exists
+  if(pcre_info->namecount > 0)
+  {
+    const char *matched_substring = NULL;
+
+    if((fetch_named_substring(pcre_info->named_substring, pcre_info, &matched_substring)) >= 0)
+    {
+      printf("substring match for %s: %s\n",pcre_info->named_substring,matched_substring);
+      pcre_free_substring(matched_substring);
+    }
+  }
+}
+
 
 int main(int argc, char **argv) {
 
@@ -39,8 +112,6 @@ int main(int argc, char **argv) {
     puts("usage: file_search <file> <pattern> <named substring>");
     return 1;
   }
-  const char *named_substring=argv[3];
-  const char *matched_substring = NULL;
 
   int fd,file_length;
   char *file_buffer;
@@ -64,59 +135,21 @@ int main(int argc, char **argv) {
   read(fd, file_buffer, file_length);
   close(fd);
 
-  // set our pcre_info buffer
+  // fire up PCRE!
   pcre_info->buffer = file_buffer;
   pcre_info->buffer_length = file_length;
-
-  ///////////////////////////////////////
-  // Do something with the file_buffer //
-  ///////////////////////////////////////
-
-  // file_length and strlen(file_buffer) are the same see?
-  // printf("strlen(file_buffer) = %d\n", (int)strlen(file_buffer));
-  // printf("        file_length = %d\n", (int)file_length);
-
   pcre_info->pattern = argv[2];
+  pcre_info->named_substring = argv[3]; // set named substring
 
-  pcre_info->re = pcre_compile(
-    pcre_info->pattern,         // the pattern :)
-    0,                          // default options
-    &(pcre_info->error),        // for errror message
-    &(pcre_info->erroroffset),  // for error offset
-    NULL);
 
-  if(pcre_info->re==NULL) // regex compile failed, handle error case
+  if(pcre_exec_single(pcre_info) > 0)
   {
-    fprintf(stderr, "error: PCRE compile failed at offset %d: %s\n", pcre_info->erroroffset, pcre_info->error);
+    free(file_buffer);
     return 1;
   }
 
-  pcre_info->rc = pcre_exec(
-    pcre_info->re,            // the compiled pattern
-    NULL,                     // no extra data
-    pcre_info->buffer,        // the file_buffer
-    pcre_info->buffer_length, // file length
-    0,                        // start at offset 0 in file_buffer
-    0,                        // default options
-    pcre_info->ovector,       // output vector for substring info
-    OVECCOUNT);
+  pcre_match_callback(pcre_info);
 
-  if(pcre_info->rc<0) // match failed, handle error cases
-  {
-    switch(pcre_info->rc)
-    {
-      case PCRE_ERROR_NOMATCH: puts("No match."); break;
-      default: fprintf(stderr,"error: matching error."); break;
-    }
-    pcre_free(pcre_info->re);
-    return 1;
-  }
-
-  if(pcre_info->rc==0) // ovector wasn't big enough, handle error case
-  {
-    pcre_info->rc = OVECCOUNT/3;
-    fprintf(stderr,"error: ovector only has room for %d substrings\n", (pcre_info->rc)-1);
-  }
 
   #ifdef DEBUG
     printf("Match succeeded at offset %d\n", pcre_info->ovector[0]);
@@ -129,52 +162,32 @@ int main(int argc, char **argv) {
       int substring_length = pcre_info->ovector[2*i+1] - pcre_info->ovector[2*i];
       printf("%2d: %.*s\n", i, substring_length, substring_start);
     }
-  #endif
-
-  int namecount;
-
-  (void)pcre_fullinfo(
-  pcre_info->re,
-  NULL,
-  PCRE_INFO_NAMECOUNT,
-  &namecount);
-
-  if(namecount > 0)
-  {
-    //XXX get_named_substring
-
-    if((fetch_named_substring(named_substring, pcre_info, &matched_substring)) >= 0)
+    if(pcre_info->namecount > 0)
     {
-      printf("substring match for %s: %s\n",named_substring,matched_substring);
-      pcre_free_substring(matched_substring);
-    }
-    //XXX
-  }
+      int name_entry_size;
 
-  #ifdef DEBUG
-    int name_entry_size;
+      (void)pcre_fullinfo(
+      pcre_info->re,            // the compiled pattern
+      NULL,                     // no extra data - we didn't study the pattern
+      PCRE_INFO_NAMEENTRYSIZE,  // size of each entry in the table
+      &name_entry_size);        // where to put the answer
+      unsigned char *name_table;
 
-    (void)pcre_fullinfo(
-    pcre_info->re,            /* the compiled pattern */
-    NULL,                     /* no extra data - we didn't study the pattern */
-    PCRE_INFO_NAMEENTRYSIZE,  /* size of each entry in the table */
-    &name_entry_size);        /* where to put the answer */
-    unsigned char *name_table;
+      (void)pcre_fullinfo(
+      pcre_info->re,            // the compiled pattern
+      NULL,                     // no extra data - we didn't study the pattern
+      PCRE_INFO_NAMETABLE,      // address of the table
+      &name_table);             // where to put the answer
 
-    (void)pcre_fullinfo(
-    pcre_info->re,            /* the compiled pattern */
-    NULL,                     /* no extra data - we didn't study the pattern */
-    PCRE_INFO_NAMETABLE,      /* address of the table */
-    &name_table);             /* where to put the answer */
-
-    unsigned char *tabptr = name_table;
-    printf("Named substrings\n");
-    for (i = 0; i < namecount; i++)
-    {
-      int n = (tabptr[0] << 8) | tabptr[1];
-      printf("(%d) %*s: %.*s\n", n, name_entry_size - 3, tabptr + 2,
-        pcre_info->ovector[2*n+1] - pcre_info->ovector[2*n], pcre_info->buffer + pcre_info->ovector[2*n]);
-      tabptr += name_entry_size;
+      unsigned char *tabptr = name_table;
+      printf("Named substrings\n");
+      for (i = 0; i < pcre_info->namecount; i++)
+      {
+        int n = (tabptr[0] << 8) | tabptr[1];
+        printf("(%d) %*s: %.*s\n", n, name_entry_size - 3, tabptr + 2,
+          pcre_info->ovector[2*n+1] - pcre_info->ovector[2*n], pcre_info->buffer + pcre_info->ovector[2*n]);
+        tabptr += name_entry_size;
+      }
     }
   #endif
 
@@ -259,7 +272,6 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-
     if(pcre_info->rc==0)
     {
       pcre_info->rc = OVECCOUNT/3;
@@ -281,50 +293,45 @@ int main(int argc, char **argv) {
       }
     #endif
 
-    int namecount;
 
     (void)pcre_fullinfo(
     pcre_info->re,
     NULL,
     PCRE_INFO_NAMECOUNT,
-    &namecount);
+    &(pcre_info->namecount));
 
-    if (namecount > 0)
-    {
 
-      if((fetch_named_substring(named_substring, pcre_info, &matched_substring)) >= 0)
+    pcre_match_callback(pcre_info);
+
+    #ifdef DEBUG
+      if(pcre_info->namecount > 0)
       {
-        printf("substring match for %s: %s\n",named_substring,matched_substring);
-        pcre_free_substring(matched_substring);
-      }
-
-      #ifdef DEBUG
         int name_entry_size;
 
         (void)pcre_fullinfo(
-        pcre_info->re,            /* the compiled pattern */
-        NULL,                     /* no extra data - we didn't study the pattern */
-        PCRE_INFO_NAMEENTRYSIZE,  /* size of each entry in the table */
-        &name_entry_size);        /* where to put the answer */
+        pcre_info->re,            // the compiled pattern
+        NULL,                     // no extra data - we didn't study the pattern
+        PCRE_INFO_NAMEENTRYSIZE,  // size of each entry in the table
+        &name_entry_size);        // where to put the answer
         unsigned char *name_table;
 
         (void)pcre_fullinfo(
-        pcre_info->re,            /* the compiled pattern */
-        NULL,                     /* no extra data - we didn't study the pattern */
-        PCRE_INFO_NAMETABLE,      /* address of the table */
-        &name_table);             /* where to put the answer */
+        pcre_info->re,            // the compiled pattern
+        NULL,                     // no extra data - we didn't study the pattern
+        PCRE_INFO_NAMETABLE,      // address of the table
+        &name_table);             // where to put the answer
 
         unsigned char *tabptr = name_table;
         printf("Named substrings\n");
-        for (i = 0; i < namecount; i++)
+        for (i = 0; i < pcre_info->namecount; i++)
         {
           int n = (tabptr[0] << 8) | tabptr[1];
           printf("(%d) %*s: %.*s\n", n, name_entry_size - 3, tabptr + 2,
             pcre_info->ovector[2*n+1] - pcre_info->ovector[2*n], pcre_info->buffer + pcre_info->ovector[2*n]);
           tabptr += name_entry_size;
         }
-      #endif
-    }
+      }
+    #endif
   }      /* End of loop to find second and subsequent matches */
 
 
