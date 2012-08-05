@@ -39,6 +39,8 @@ int main(int argc, char **argv) {
     puts("usage: file_search <file> <pattern> <named substring>");
     return 1;
   }
+  const char *named_substring=argv[3];
+  const char *matched_substring = NULL;
 
   int fd,file_length;
   char *file_buffer;
@@ -129,20 +131,54 @@ int main(int argc, char **argv) {
     }
   #endif
 
-  //XXX get_named_substring
-  const char *named_substring=argv[3];
-  const char *matched_substring = NULL;
+  int namecount;
 
-  if((fetch_named_substring(named_substring, pcre_info, &matched_substring)) < 0)
+  (void)pcre_fullinfo(
+  pcre_info->re,
+  NULL,
+  PCRE_INFO_NAMECOUNT,
+  &namecount);
+
+  if(namecount > 0)
   {
-    fprintf(stderr,"error: named substring %s not found\n",named_substring);
-    return 1;
+    //XXX get_named_substring
+
+    if((fetch_named_substring(named_substring, pcre_info, &matched_substring)) >= 0)
+    {
+      printf("substring match for %s: %s\n",named_substring,matched_substring);
+      pcre_free_substring(matched_substring);
+    }
+    //XXX
   }
 
-  printf("substring match for %s: %s\n",named_substring,matched_substring);
+  #ifdef DEBUG
+    int name_entry_size;
 
-  pcre_free_substring(matched_substring);
-  //XXX
+    (void)pcre_fullinfo(
+    pcre_info->re,            /* the compiled pattern */
+    NULL,                     /* no extra data - we didn't study the pattern */
+    PCRE_INFO_NAMEENTRYSIZE,  /* size of each entry in the table */
+    &name_entry_size);        /* where to put the answer */
+    unsigned char *name_table;
+
+    (void)pcre_fullinfo(
+    pcre_info->re,            /* the compiled pattern */
+    NULL,                     /* no extra data - we didn't study the pattern */
+    PCRE_INFO_NAMETABLE,      /* address of the table */
+    &name_table);             /* where to put the answer */
+
+    unsigned char *tabptr = name_table;
+    printf("Named substrings\n");
+    for (i = 0; i < namecount; i++)
+    {
+      int n = (tabptr[0] << 8) | tabptr[1];
+      printf("(%d) %*s: %.*s\n", n, name_entry_size - 3, tabptr + 2,
+        pcre_info->ovector[2*n+1] - pcre_info->ovector[2*n], pcre_info->buffer + pcre_info->ovector[2*n]);
+      tabptr += name_entry_size;
+    }
+  #endif
+
+
 
   //XXX search for additonal matches
 
@@ -223,7 +259,6 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    //printf("\nMatch succeeded again at offset %d\n", pcre_info->ovector[0]);
 
     if(pcre_info->rc==0)
     {
@@ -235,6 +270,8 @@ int main(int argc, char **argv) {
        also any named substrings. */
 
     #ifdef DEBUG
+      printf("\nMatch succeeded again at offset %d\n", pcre_info->ovector[0]);
+
       int i;
       for (i = 0; i < pcre_info->rc; i++)
       {
@@ -255,13 +292,11 @@ int main(int argc, char **argv) {
     if (namecount > 0)
     {
 
-      if((fetch_named_substring(named_substring, pcre_info, &matched_substring)) < 0)
+      if((fetch_named_substring(named_substring, pcre_info, &matched_substring)) >= 0)
       {
-        fprintf(stderr,"error: named substring %s not found\n",named_substring);
-        return 1;
+        printf("substring match for %s: %s\n",named_substring,matched_substring);
+        pcre_free_substring(matched_substring);
       }
-      printf("substring match for %s: %s\n",named_substring,matched_substring);
-      pcre_free_substring(matched_substring);
 
       #ifdef DEBUG
         int name_entry_size;
