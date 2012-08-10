@@ -9,8 +9,7 @@
 
 #define OVECCOUNT 30    // for libpcre, should be multiple of 3
 
-/*
-static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
+size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
 {
   size_t realsize = size * nmemb;
   struct MemoryStruct *mem = (struct MemoryStruct *)userp;
@@ -28,7 +27,6 @@ static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, voi
 
   return realsize;
 }
-*/
 
 int fetch_named_substring(const char *named_substring, struct pcre_container *pcre_info, const char **matched_substring)
 {

@@ -25,25 +25,6 @@ void pcre_match_callback(struct pcre_container *pcre_info)
   }
 }
 
-static size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
-{
-  size_t realsize = size * nmemb;
-  struct MemoryStruct *mem = (struct MemoryStruct *)userp;
-
-  mem->memory = realloc(mem->memory, mem->size + realsize + 1); 
-  if (mem->memory == NULL)
-  {
-    fprintf(stderr, "error: not enough memory (realloc returned NULL)\n");
-    exit(1);
-  }
-
-  memcpy(&(mem->memory[mem->size]), contents, realsize);
-  mem->size += realsize;
-  mem->memory[mem->size] = 0;
-
-  return realsize;
-}
-
 int main(int argc, char **argv) {
 
   // check cli args
@@ -89,13 +70,11 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  /*
   if(pcre_exec_multi(pcre_info,pcre_match_callback) > 0)
   {
     // free(pcre_info->buffer);
     return 1;
   }
-  */
 
 
 
