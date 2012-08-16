@@ -9,6 +9,33 @@
 
 #define OVECCOUNT 30    // for libpcre, should be multiple of 3
 
+//replaces all occurences with another occurence
+char *str_replace(char * t1, char * t2, char * t6){
+  // count number of substrings
+  int substr_count = 0;
+  char *tmp = t6;
+  while((*tmp != '\0') && (tmp=strstr(tmp,t1)))
+  {
+    substr_count++;
+    tmp++;
+  }
+  if(substr_count > 0)
+  {
+    int buffer_size = strlen(t6)-(strlen(t1)*substr_count)+(strlen(t2)*substr_count)+1;
+    char*t4;
+    char*t5=calloc(buffer_size,sizeof(char*));
+    while(strstr(t6,t1)){
+      t4=strstr(t6,t1);
+      strncpy(t5+strlen(t5),t6,t4-t6);
+      strcat(t5,t2);
+      t4+=strlen(t1);
+      t6=t4;
+    }
+    return strcat(t5,t4);
+  }
+  return NULL; // no substrings found
+}
+
 size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
 {
   size_t realsize = size * nmemb;

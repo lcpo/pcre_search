@@ -19,7 +19,14 @@ void pcre_match_callback(struct pcre_container *pcre_info)
 
     if((fetch_named_substring(pcre_info->named_substring, pcre_info, &matched_substring)) >= 0)
     {
-      printf("substring match for %s: %s\n",pcre_info->named_substring,matched_substring);
+      char *ret = NULL;
+      if((ret=str_replace("\\u0026#39;","\'",(char*)matched_substring)))
+      {
+        printf("substring match for %s: %s\n",pcre_info->named_substring,ret);
+        free(ret);
+      } else {
+        printf("substring match for %s: %s\n",pcre_info->named_substring,matched_substring);
+      }
       pcre_free_substring(matched_substring);
     }
   }
