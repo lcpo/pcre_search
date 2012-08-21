@@ -6,11 +6,11 @@
 
 #define OVECCOUNT 30 // should be multiple of 3
 
-struct MemoryStruct
+typedef struct
 {
   char *memory;
   size_t size;
-};
+} CURL_BUFFER;
 
 struct pcre_container {
   char *buffer;                 // subject buffer
@@ -26,6 +26,7 @@ struct pcre_container {
 };
 
 char *str_replace(char * t1, char * t2, char * t6);
+CURL_BUFFER *curl_buffer_new();
 size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp);
 int fetch_named_substring(const char *named_substring, struct pcre_container *pcre_info, const char **matched_substring);
 int pcre_exec_single(struct pcre_container *pcre_info, void (*callback)());

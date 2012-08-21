@@ -9,7 +9,7 @@
 
 #define OVECCOUNT 30    // for libpcre, should be multiple of 3
 
-//replaces all occurences with another occurence
+// replaces all occurences with another occurence
 char *str_replace(char * t1, char * t2, char * t6){
   // count number of substrings
   int substr_count = 0;
@@ -36,10 +36,22 @@ char *str_replace(char * t1, char * t2, char * t6){
   return NULL; // no substrings found
 }
 
+// curl buffer constructor
+CURL_BUFFER *curl_buffer_new()
+{
+  CURL_BUFFER *b; 
+  if((b = malloc(sizeof *b)) == NULL)
+    return NULL;
+  if((b->memory = (char*)malloc(1)) == NULL)
+    return NULL;
+  b->size = 0;
+  return b;
+}
+
 size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
 {
   size_t realsize = size * nmemb;
-  struct MemoryStruct *mem = (struct MemoryStruct *)userp;
+  CURL_BUFFER *mem = (CURL_BUFFER *)userp;
 
   mem->memory = realloc(mem->memory, mem->size + realsize + 1);
   if (mem->memory == NULL)

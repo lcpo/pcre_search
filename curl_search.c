@@ -41,18 +41,27 @@ int main(int argc, char **argv) {
     return 1;
   }
 
-  CURL *curl_handle;
+  curl_global_init(CURL_GLOBAL_NOTHING);
+  CURL *curl_handle = curl_easy_init();
+
+  CURL_BUFFER *curl_buffer;
+  if((curl_buffer = curl_buffer_new()) == NULL)
+  {
+    fprintf(stderr,"Error: malloc() curl_buffer\n");
+    return 1;
+  }
+  /*
   struct MemoryStruct chunk;
   struct MemoryStruct *chunk_ptr = &chunk;
   chunk.memory = malloc(1);
   chunk.size = 0;
+  */
 
-  curl_global_init(CURL_GLOBAL_NOTHING);
-  curl_handle = curl_easy_init();
 
   curl_easy_setopt(curl_handle, CURLOPT_URL, argv[1]);
   curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
-  curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)&chunk);
+  //curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)&chunk);
+  curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)curl_buffer);
   curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "Mozilla");
 
   char curl_errorbuf[CURL_ERROR_SIZE];
@@ -65,8 +74,8 @@ int main(int argc, char **argv) {
   }
 
   // fire up PCRE!
-  pcre_info->buffer = chunk_ptr->memory;
-  pcre_info->buffer_length = chunk_ptr->size;
+  pcre_info->buffer = curl_buffer->memory;
+  pcre_info->buffer_length = curl_buffer->size;
   pcre_info->pattern = argv[2];
   pcre_info->named_substring = argv[3]; // set named substring
 
@@ -87,7 +96,8 @@ int main(int argc, char **argv) {
 
   // cleanup
   //free(pcre_info->buffer);
-  curl_free(chunk.memory);
+  curl_free(curl_buffer->memory);
+  free(curl_buffer);
   curl_easy_cleanup(curl_handle);
   curl_global_cleanup();
 
