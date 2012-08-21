@@ -37,7 +37,7 @@ char *str_replace(char * t1, char * t2, char * t6){
   return NULL; // no substrings found
 }
 
-// curl buffer constructor
+// CURL_BUFFER constructor
 CURL_BUFFER *curl_buffer_new()
 {
   CURL_BUFFER *b; 
@@ -49,10 +49,28 @@ CURL_BUFFER *curl_buffer_new()
   return b;
 }
 
+// CURL_BUFFER destructor
 void curl_buffer_delete(CURL_BUFFER *curl_buffer)
 {
   curl_free(curl_buffer->memory);
   free(curl_buffer);
+}
+
+// PCRE_CONTAINER constructor
+PCRE_CONTAINER *pcre_container_new()
+{
+  PCRE_CONTAINER *p;
+  if((p = malloc(sizeof *p)) == NULL)
+    return NULL;
+  p->re = NULL;
+  return p;
+}
+
+// PCRE_CONTAINER destructor
+void pcre_container_delete(PCRE_CONTAINER *pcre_info)
+{
+  pcre_free(pcre_info->re);
+  free(pcre_info);
 }
 
 size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)
@@ -74,7 +92,7 @@ size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *user
   return realsize;
 }
 
-int fetch_named_substring(const char *named_substring, struct pcre_container *pcre_info, const char **matched_substring)
+int fetch_named_substring(const char *named_substring, PCRE_CONTAINER *pcre_info, const char **matched_substring)
 {
   int rs = pcre_get_named_substring(
     pcre_info->re,      // regex
@@ -86,7 +104,7 @@ int fetch_named_substring(const char *named_substring, struct pcre_container *pc
   return rs;
 }
 
-int pcre_exec_single(struct pcre_container *pcre_info, void (*callback)())
+int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)())
 {
   pcre_info->re = pcre_compile(
     pcre_info->pattern,         // the pattern :)
@@ -118,7 +136,7 @@ int pcre_exec_single(struct pcre_container *pcre_info, void (*callback)())
       case PCRE_ERROR_NOMATCH: puts("No match."); break;
       default: fprintf(stderr,"error: matching error."); break;
     }
-    pcre_free(pcre_info->re);
+    //pcre_free(pcre_info->re);
     return 1;
   }
 
@@ -126,7 +144,7 @@ int pcre_exec_single(struct pcre_container *pcre_info, void (*callback)())
   {
     pcre_info->rc = OVECCOUNT/3;
     fprintf(stderr,"error: ovector only has room for %d substrings\n", (pcre_info->rc)-1);
-    pcre_free(pcre_info->re);
+    //pcre_free(pcre_info->re);
     return 1;
   }
 
@@ -181,7 +199,7 @@ int pcre_exec_single(struct pcre_container *pcre_info, void (*callback)())
   return 0;
 }
 
-int pcre_exec_multi(struct pcre_container *pcre_info, void (*callback)())
+int pcre_exec_multi(PCRE_CONTAINER *pcre_info, void (*callback)())
 {
   //XXX search for additonal matches
 
@@ -258,7 +276,7 @@ int pcre_exec_multi(struct pcre_container *pcre_info, void (*callback)())
     if(pcre_info->rc < 0)
     {
       printf("Matching error %d\n", pcre_info->rc);
-      pcre_free(pcre_info->re);
+      //pcre_free(pcre_info->re);
       return 1;
     }
 

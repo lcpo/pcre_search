@@ -6,11 +6,8 @@
 
 #include "util.h"
 
-struct pcre_container p;
-struct pcre_container *pcre_info = &p;
-
 // custom callback function to exec on each match
-void pcre_match_callback(struct pcre_container *pcre_info)
+void pcre_match_callback(PCRE_CONTAINER *pcre_info)
 {
   // get_named_substring if it exists
   if(pcre_info->namecount > 0)
@@ -61,10 +58,21 @@ int main(int argc, char **argv) {
   if(curl_easy_perform(curl_handle) != 0)
   {
     fprintf(stderr, "%s\n", curl_errorbuf);
+    curl_buffer_delete(curl_buffer);
     return 1;
   }
 
   // fire up PCRE!
+  PCRE_CONTAINER *pcre_info;
+  if((pcre_info = pcre_container_new()) == NULL)
+  {
+    fprintf(stderr,"Error: malloc() pcre_container\n");
+    curl_buffer_delete(curl_buffer);
+    curl_easy_cleanup(curl_handle);
+    curl_global_cleanup();
+    return 1;
+  }
+
   pcre_info->buffer = curl_buffer->memory;
   pcre_info->buffer_length = curl_buffer->size;
   pcre_info->pattern = argv[2];
@@ -77,6 +85,7 @@ int main(int argc, char **argv) {
     curl_buffer_delete(curl_buffer);
     curl_easy_cleanup(curl_handle);
     curl_global_cleanup();
+    pcre_container_delete(pcre_info);
     return 1;
   }
 
@@ -86,6 +95,7 @@ int main(int argc, char **argv) {
     curl_buffer_delete(curl_buffer);
     curl_easy_cleanup(curl_handle);
     curl_global_cleanup();
+    pcre_container_delete(pcre_info);
     return 1;
   }
 
@@ -93,7 +103,6 @@ int main(int argc, char **argv) {
   curl_buffer_delete(curl_buffer);
   curl_easy_cleanup(curl_handle);
   curl_global_cleanup();
-  pcre_free(pcre_info->re);
-
+  pcre_container_delete(pcre_info);
   return 0;
 }
