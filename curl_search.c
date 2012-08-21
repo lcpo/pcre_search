@@ -1,8 +1,8 @@
 #include <stdio.h>      // io
 #include <stdlib.h>     // calloc,free,etc.
 #include <string.h>     // strlen
-#include <pcre.h>
-#include <curl/curl.h>
+#include <pcre.h>       // libpcre
+#include <curl/curl.h>  // libcurl
 
 #include "util.h"
 
@@ -43,6 +43,7 @@ int main(int argc, char **argv) {
 
   curl_global_init(CURL_GLOBAL_NOTHING);
   CURL *curl_handle = curl_easy_init();
+  char curl_errorbuf[CURL_ERROR_SIZE];
 
   CURL_BUFFER *curl_buffer;
   if((curl_buffer = curl_buffer_new()) == NULL)
@@ -50,21 +51,11 @@ int main(int argc, char **argv) {
     fprintf(stderr,"Error: malloc() curl_buffer\n");
     return 1;
   }
-  /*
-  struct MemoryStruct chunk;
-  struct MemoryStruct *chunk_ptr = &chunk;
-  chunk.memory = malloc(1);
-  chunk.size = 0;
-  */
-
 
   curl_easy_setopt(curl_handle, CURLOPT_URL, argv[1]);
   curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
-  //curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)&chunk);
   curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)curl_buffer);
   curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "Mozilla");
-
-  char curl_errorbuf[CURL_ERROR_SIZE];
   curl_easy_setopt(curl_handle, CURLOPT_ERRORBUFFER, curl_errorbuf);
 
   if(curl_easy_perform(curl_handle) != 0)
@@ -82,26 +73,26 @@ int main(int argc, char **argv) {
 
   if(pcre_exec_single(pcre_info,pcre_match_callback) > 0)
   {
-    // free(pcre_info->buffer);
+    // cleanup and return error
+    curl_buffer_delete(curl_buffer);
+    curl_easy_cleanup(curl_handle);
+    curl_global_cleanup();
     return 1;
   }
 
   if(pcre_exec_multi(pcre_info,pcre_match_callback) > 0)
   {
-    // free(pcre_info->buffer);
+    // cleanup and return error
+    curl_buffer_delete(curl_buffer);
+    curl_easy_cleanup(curl_handle);
+    curl_global_cleanup();
     return 1;
   }
 
-
-
-  // cleanup
-  //free(pcre_info->buffer);
-  curl_free(curl_buffer->memory);
-  free(curl_buffer);
+  // cleanup and return normal
+  curl_buffer_delete(curl_buffer);
   curl_easy_cleanup(curl_handle);
   curl_global_cleanup();
-
-
   pcre_free(pcre_info->re);
 
   return 0;

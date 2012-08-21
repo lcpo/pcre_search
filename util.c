@@ -4,6 +4,7 @@
 #include <fcntl.h>      // lseek,open,close,etc.
 #include <sys/types.h>  // size_t
 #include <pcre.h>       // libpcre
+#include <curl/curl.h>  // libcurl
 
 #include "util.h"       // WriteMemoryCallback,pcrecontainer structs
 
@@ -46,6 +47,12 @@ CURL_BUFFER *curl_buffer_new()
     return NULL;
   b->size = 0;
   return b;
+}
+
+void curl_buffer_delete(CURL_BUFFER *curl_buffer)
+{
+  curl_free(curl_buffer->memory);
+  free(curl_buffer);
 }
 
 size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp)

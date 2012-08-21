@@ -27,6 +27,7 @@ struct pcre_container {
 
 char *str_replace(char * t1, char * t2, char * t6);
 CURL_BUFFER *curl_buffer_new();
+void curl_buffer_delete(CURL_BUFFER *curl_buffer);
 size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp);
 int fetch_named_substring(const char *named_substring, struct pcre_container *pcre_info, const char **matched_substring);
 int pcre_exec_single(struct pcre_container *pcre_info, void (*callback)());
