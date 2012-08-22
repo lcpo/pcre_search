@@ -55,6 +55,7 @@ int main(int argc, char **argv) {
   curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "Mozilla");
   curl_easy_setopt(curl_handle, CURLOPT_ERRORBUFFER, curl_errorbuf);
 
+  // fire up CURL!
   if(curl_easy_perform(curl_handle) != 0)
   {
     fprintf(stderr, "%s\n", curl_errorbuf);
@@ -77,17 +78,6 @@ int main(int argc, char **argv) {
   pcre_info->buffer_length = curl_buffer->size;
   pcre_info->pattern = argv[2];
   pcre_info->named_substring = argv[3]; // set named substring
-
-
-  if(pcre_exec_single(pcre_info,pcre_match_callback) > 0)
-  {
-    // cleanup and return error
-    curl_buffer_delete(curl_buffer);
-    curl_easy_cleanup(curl_handle);
-    curl_global_cleanup();
-    pcre_container_delete(pcre_info);
-    return 1;
-  }
 
   if(pcre_exec_multi(pcre_info,pcre_match_callback) > 0)
   {

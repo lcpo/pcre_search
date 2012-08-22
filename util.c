@@ -41,7 +41,7 @@ char *str_replace(char * t1, char * t2, char * t6){
 CURL_BUFFER *curl_buffer_new()
 {
   CURL_BUFFER *b; 
-  if((b = malloc(sizeof *b)) == NULL)
+  if((b = (CURL_BUFFER*)malloc(sizeof *b)) == NULL)
     return NULL;
   if((b->memory = (char*)malloc(1)) == NULL)
     return NULL;
@@ -136,7 +136,6 @@ int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)())
       case PCRE_ERROR_NOMATCH: puts("No match."); break;
       default: fprintf(stderr,"error: matching error."); break;
     }
-    //pcre_free(pcre_info->re);
     return 1;
   }
 
@@ -144,7 +143,6 @@ int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)())
   {
     pcre_info->rc = OVECCOUNT/3;
     fprintf(stderr,"error: ovector only has room for %d substrings\n", (pcre_info->rc)-1);
-    //pcre_free(pcre_info->re);
     return 1;
   }
 
@@ -154,6 +152,7 @@ int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)())
   PCRE_INFO_NAMECOUNT,
   &(pcre_info->namecount));
 
+  // We have a match, run callback
   callback(pcre_info);
 
   #ifdef DEBUG
@@ -201,9 +200,10 @@ int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)())
 
 int pcre_exec_multi(PCRE_CONTAINER *pcre_info, void (*callback)())
 {
-  //XXX search for additonal matches
+  if(pcre_exec_single(pcre_info,callback) > 0)
+    return 1;
 
-  // do we need this? -->
+  //XXX do we need this? -->
   int utf8;
   unsigned int option_bits;
   (void)pcre_fullinfo(pcre_info->re,NULL,PCRE_INFO_OPTIONS,&option_bits);
@@ -255,7 +255,11 @@ int pcre_exec_multi(PCRE_CONTAINER *pcre_info, void (*callback)())
 
     if(pcre_info->rc == PCRE_ERROR_NOMATCH)
     {
-      if(options == 0) break;
+      if(options == 0)
+      {
+        // if options is 0 we have found all possible matches
+        break;
+      }
       pcre_info->ovector[1] = start_offset + 1; //advance one byte
       if(crlf_is_newline &&
          start_offset < pcre_info->buffer_length - 1 &&
@@ -276,7 +280,6 @@ int pcre_exec_multi(PCRE_CONTAINER *pcre_info, void (*callback)())
     if(pcre_info->rc < 0)
     {
       printf("Matching error %d\n", pcre_info->rc);
-      //pcre_free(pcre_info->re);
       return 1;
     }
 
@@ -286,10 +289,10 @@ int pcre_exec_multi(PCRE_CONTAINER *pcre_info, void (*callback)())
       printf("ovector only has room for %d captured substrings\n", pcre_info->rc -1);
     }
 
-    /* As before, show substrings stored in the output vector by number, and then
-       also any named substrings. */
-
     #ifdef DEBUG
+      // As before, show substrings stored in the output vector
+      // by number, and then also any named substrings.
+
       printf("\nMatch succeeded again at offset %d\n", pcre_info->ovector[0]);
 
       int i;
@@ -301,14 +304,13 @@ int pcre_exec_multi(PCRE_CONTAINER *pcre_info, void (*callback)())
       }
     #endif
 
-
     (void)pcre_fullinfo(
     pcre_info->re,
     NULL,
     PCRE_INFO_NAMECOUNT,
     &(pcre_info->namecount));
 
-
+    // We have a match, run callback
     callback(pcre_info);
 
     #ifdef DEBUG
