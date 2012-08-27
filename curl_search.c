@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
   curl_easy_setopt(curl_handle, CURLOPT_URL, argv[1]);
   curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
   curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)curl_buffer);
-  curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "Mozilla");
+  curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "Chrome");
   curl_easy_setopt(curl_handle, CURLOPT_ERRORBUFFER, curl_errorbuf);
 
   // fire up CURL!
