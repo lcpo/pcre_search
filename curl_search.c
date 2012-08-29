@@ -16,9 +16,14 @@ void pcre_match_callback(PCRE_CONTAINER *pcre_info)
 
     if((fetch_named_substring(pcre_info->named_substring, pcre_info, &matched_substring)) >= 0)
     {
-      char *trans = utf8_to_ascii((char*)matched_substring);
-      printf("substring match for %s: %s\n",pcre_info->named_substring,trans);
-      free(trans);
+      char *trans = NULL;
+      if((trans = utf8_to_ascii((char*)matched_substring)))
+      {
+        printf("substring match for %s: %s\n",pcre_info->named_substring,trans);
+        free(trans);
+      } else {
+        printf("substring match for %s: %s\n",pcre_info->named_substring,matched_substring);
+      }
 
       /*
       char *ret = NULL;

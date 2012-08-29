@@ -21,14 +21,14 @@ char *utf8_to_ascii(char *in)
   iconv_t cd;
 
   if ((iconv_t)(-1) == (cd = iconv_open("ASCII//TRANSLIT", "UTF-8"))) {
-    fprintf(stderr,"Failed to iconv_open.\n");
+    //fprintf(stderr,"Failed to iconv_open.\n");
     free(out);
-    return in;
+    return NULL;
   }
   if ((size_t)(-1) == iconv(cd, &in_ptr, &in_size, &out_ptr, &in_size)) {
-    fprintf(stderr,"Failed to convert characters to new code set.\n");
+    //fprintf(stderr,"Failed to convert characters to new code set.\n");
     free(out);
-    return in;
+    return NULL;
   }
 
   return out;
