@@ -1,7 +1,7 @@
 #include <stdio.h>      // io
 #include <stdlib.h>     // calloc,free,exit,etc.
 #include <string.h>     // strlen
-#include <fcntl.h>      // lseek,open,close,etc.
+#include <iconv.h>	// utf conversion
 #include <sys/types.h>  // size_t
 #include <pcre.h>       // libpcre
 #include <curl/curl.h>  // libcurl
@@ -9,6 +9,30 @@
 #include "util.h"       // WriteMemoryCallback,pcrecontainer structs
 
 #define OVECCOUNT 30    // for libpcre, should be multiple of 3
+
+char *utf8_to_ascii(char *in)
+{
+  size_t in_size=strlen(in)+1;
+  char *out = (char*)calloc(in_size,1);
+
+  char *in_ptr  = in;
+  char *out_ptr = out;
+
+  iconv_t cd;
+
+  if ((iconv_t)(-1) == (cd = iconv_open("ASCII//TRANSLIT", "UTF-8"))) {
+    fprintf(stderr,"Failed to iconv_open.\n");
+    free(out);
+    return in;
+  }
+  if ((size_t)(-1) == iconv(cd, &in_ptr, &in_size, &out_ptr, &in_size)) {
+    fprintf(stderr,"Failed to convert characters to new code set.\n");
+    free(out);
+    return in;
+  }
+
+  return out;
+}
 
 // replaces all occurences with another occurence
 char *str_replace(char * t1, char * t2, char * t6){

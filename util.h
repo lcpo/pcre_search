@@ -26,6 +26,7 @@ typedef struct
   int ovector[OVECCOUNT];       // output vector
 } PCRE_CONTAINER;
 
+char *utf8_to_ascii(char *in);
 char *str_replace(char * t1, char * t2, char * t6);
 CURL_BUFFER *curl_buffer_new();
 void curl_buffer_delete(CURL_BUFFER *curl_buffer);

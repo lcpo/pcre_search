@@ -3,34 +3,38 @@
 #include <iconv.h>
 #include <string.h>
 
-int main()
+char *utf8_to_ascii(char *in)
 {
-  char *in=strdup("The bee\xE2\x80\x99s knees, is a stupid expression.");
-  size_t in_size=strlen(in);
+  size_t in_size=strlen(in)+1;
+  char *out = (char*)calloc(in_size,1);
 
-  char *out=(char*)calloc(in_size,1);
-
-  char *in_ptr	= in;
+  char *in_ptr  = in;
   char *out_ptr = out;
 
   iconv_t cd;
 
   if ((iconv_t)(-1) == (cd = iconv_open("ASCII//TRANSLIT", "UTF-8"))) {
-    printf("Failed to iconv_open.\n");
-    return 1;
+    fprintf(stderr,"Failed to iconv_open.\n");
+    free(out);
+    return in;
   }
   if ((size_t)(-1) == iconv(cd, &in_ptr, &in_size, &out_ptr, &in_size)) {
-    printf("Fail to convert characters to new code set.\n");
-    return 1;
+    fprintf(stderr,"Failed to convert characters to new code set.\n");
+    free(out);
+    return in;
   }
 
-  printf("in: %s\n",in);
-  printf("out: %s\n",out);
+  return out;
+}
 
-  if (-1 == iconv_close(cd)) {
-    printf("Fail to iconv_close.\n");
-    return 1;
-  }
+
+int main()
+{
+  char *in=strdup("The bee\xE2\x80\x99s knees, is a stupid expression.");
+
+  char *out = utf8_to_ascii(in);
+
+  printf("in: %s\nout: %s\n",in,out);
 
   free(in);
   free(out);
