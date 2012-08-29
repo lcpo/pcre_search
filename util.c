@@ -24,7 +24,7 @@ char *str_replace(char * t1, char * t2, char * t6){
   {
     int buffer_size = strlen(t6)-(strlen(t1)*substr_count)+(strlen(t2)*substr_count)+1;
     char*t4;
-    char*t5=calloc(buffer_size,sizeof(char*));
+    char*t5=calloc(buffer_size,1);
     while(strstr(t6,t1)){
       t4=strstr(t6,t1);
       strncpy(t5+strlen(t5),t6,t4-t6);
