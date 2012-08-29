@@ -31,6 +31,9 @@ char *utf8_to_ascii(char *in)
     return NULL;
   }
 
+  if(-1 == iconv_close(cd))
+    fprintf(stderr,"Failed to iconv_close.\n");
+
   return out;
 }
 
