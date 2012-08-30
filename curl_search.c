@@ -16,6 +16,7 @@ void pcre_match_callback(PCRE_CONTAINER *pcre_info)
 
     if((fetch_named_substring(pcre_info->named_substring, pcre_info, &matched_substring)) >= 0)
     {
+      /*
       char *trans = NULL;
       if((trans = utf8_to_ascii((char*)matched_substring)))
       {
@@ -24,8 +25,8 @@ void pcre_match_callback(PCRE_CONTAINER *pcre_info)
       } else {
         printf("substring match for %s: %s\n",pcre_info->named_substring,matched_substring);
       }
+      */
 
-      /*
       char *ret = NULL;
       if((ret=str_replace("\\u0026#39;","\'",(char*)matched_substring)))
       {
@@ -34,7 +35,6 @@ void pcre_match_callback(PCRE_CONTAINER *pcre_info)
       } else {
         printf("substring match for %s: %s\n",pcre_info->named_substring,matched_substring);
       }
-      */
       pcre_free_substring(matched_substring);
     }
   }
@@ -61,6 +61,7 @@ int main(int argc, char **argv) {
   }
 
   curl_easy_setopt(curl_handle, CURLOPT_URL, argv[1]);
+  curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 1L);
   curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
   curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)curl_buffer);
   curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "Chrome");

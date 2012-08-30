@@ -20,7 +20,7 @@ char *utf8_to_ascii(char *in)
 
   iconv_t cd;
 
-  if ((iconv_t)(-1) == (cd = iconv_open("ISO-8859-1//TRANSLIT", "UTF-8"))) {
+  if ((iconv_t)(-1) == (cd = iconv_open("ASCII//TRANSLIT", "UTF-8"))) {
     //fprintf(stderr,"Failed to iconv_open.\n");
     free(out);
     return NULL;
