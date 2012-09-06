@@ -10,6 +10,45 @@
 
 #define OVECCOUNT 30    // for libpcre, should be multiple of 3
 
+CURL_BUFFER *request(char *url)
+{
+  curl_global_init(CURL_GLOBAL_NOTHING);
+  CURL *curl_handle = curl_easy_init();
+  char curl_errorbuf[CURL_ERROR_SIZE];
+
+  CURL_BUFFER *curl_buffer;
+  if((curl_buffer = curl_buffer_new()) == NULL)
+  {
+    fprintf(stderr,"Error: malloc() curl_buffer\n");
+    curl_easy_cleanup(curl_handle);
+    curl_global_cleanup();
+    return NULL;
+  }
+
+  curl_easy_setopt(curl_handle, CURLOPT_URL, url);
+  curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 2L);
+  curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
+  curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)curl_buffer);
+  curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "Chrome");
+  curl_easy_setopt(curl_handle, CURLOPT_ERRORBUFFER, curl_errorbuf);
+
+  // fire up CURL!
+  if(curl_easy_perform(curl_handle) != 0)
+  {
+    fprintf(stderr, "%s\n", curl_errorbuf);
+    curl_buffer_delete(curl_buffer);
+    curl_easy_cleanup(curl_handle);
+    curl_global_cleanup();
+    return NULL;
+  }
+
+  curl_easy_cleanup(curl_handle);
+  curl_global_cleanup();
+
+  return curl_buffer;
+}
+
+
 char *utf8_to_ascii(char *in)
 {
   size_t in_size=strlen(in)+1;
