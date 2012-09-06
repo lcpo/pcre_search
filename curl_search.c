@@ -1,8 +1,6 @@
 #include <stdio.h>      // io
 #include <stdlib.h>     // calloc,free,etc.
 #include <string.h>     // strlen
-#include <pcre.h>       // libpcre
-#include <curl/curl.h>  // libcurl
 
 #include "util.h"
 
@@ -34,7 +32,7 @@ int main(int argc, char **argv) {
   // check cli args
   if(argc<4)
   {
-    puts("usage: curl_search <url> <pattern> <named substring>");
+    puts("Usage: curl_search [url] [pattern] [named substring]");
     return 1;
   }
 
