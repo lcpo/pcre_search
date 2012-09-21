@@ -5,6 +5,7 @@
 #include "util.h"
 
 // custom callback function to exec on each match
+/*
 void pcre_match_callback(PCRE_CONTAINER *pcre_info)
 {
   // get_named_substring if it exists
@@ -26,9 +27,14 @@ void pcre_match_callback(PCRE_CONTAINER *pcre_info)
     }
   }
 }
+*/
 
 int main(int argc, char **argv) {
 
+//  curl_pcre_search("http://thefuckingweather.com/?where=21044", "<span class=\"temperature\"[^>]+>(?P<temp>[^<]+)</span>.*?<p class=\"remark\">(?P<remark>[^<]+)</p>.*?<p class=\"flavor\">(?P<flavortext>[^<]+)</p>", "temp", "remark", "flavortext");
+
+curl_pcre_search("http://thefuckingweather.com/?where=21044", "<span class=\"temperature\"[^>]+>(?P<temp>[^<]+)</span>.*?<p class=\"remark\">(?P<remark>[^<]+)</p>.*?<p class=\"flavor\">(?P<flavortext>[^<]+)</p>", "temp", "remark", "flavortext");
+/*
   // check cli args
   if(argc<4)
   {
@@ -55,7 +61,8 @@ int main(int argc, char **argv) {
   pcre_info->pattern = argv[2];
   pcre_info->named_substring = argv[3]; // set named substring
 
-  if(pcre_exec_multi(pcre_info,pcre_match_callback))
+//  if(pcre_exec_multi(pcre_info,pcre_match_callback))
+  if(pcre_exec_multi(pcre_info,NULL))
   {
     // cleanup and return error
     curl_buffer_delete(curl_buffer);
@@ -66,5 +73,7 @@ int main(int argc, char **argv) {
   // cleanup and return normal
   curl_buffer_delete(curl_buffer);
   pcre_container_delete(pcre_info);
+*/
+
   return 0;
 }

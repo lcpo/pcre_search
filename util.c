@@ -1,5 +1,6 @@
 #include <stdio.h>      // io
 #include <stdlib.h>     // calloc,free,exit,etc.
+#include <stdarg.h>     // va_list
 #include <string.h>     // strlen
 #include <iconv.h>	// utf conversion
 #include <sys/types.h>  // size_t
@@ -9,6 +10,63 @@
 #include "util.h"       // WriteMemoryCallback,pcrecontainer structs
 
 #define OVECCOUNT 30    // for libpcre, should be multiple of 3
+
+// curl_pcre_search(url, re, named_subpattern, named_subpattern)
+int curl_pcre_search(char *url, char *re, ...)
+{
+  // fire up CURL!
+  CURL_BUFFER *curl_buffer = request(url);
+  if(!curl_buffer) return 1;
+
+  PCRE_CONTAINER *pcre_info = pcre_container_new();
+  if(!pcre_info)
+  {
+    fprintf(stderr,"error: malloc() pcre_container\n");
+    curl_buffer_delete(curl_buffer);
+    return 1;
+  }
+
+  pcre_info->buffer = curl_buffer->memory;
+  pcre_info->buffer_length = curl_buffer->size;
+  pcre_info->pattern = re;
+
+  if(pcre_exec_single(pcre_info,NULL))
+  {
+    curl_buffer_delete(curl_buffer);
+    pcre_container_delete(pcre_info);
+    return 1;
+  }
+
+  if(pcre_info->namecount <= 0)
+  {
+    fprintf(stderr, "error: curl_pcre_search() no named substrings in regex");
+    curl_buffer_delete(curl_buffer);
+    pcre_container_delete(pcre_info);
+    return 1;
+  }
+
+  const char *matched_substring = NULL;
+  char *ns = NULL;
+  va_list valist;
+  va_start(valist, re);
+  int i;
+  for(i=0;i<pcre_info->namecount;i++)
+  {
+    ns = va_arg(valist, char*);
+    if((fetch_named_substring((const char*)ns, pcre_info, &matched_substring)) >= 0)
+    {
+      printf("substring match for %s: %s\n", ns, matched_substring);
+      pcre_free_substring(matched_substring);
+    }
+  }
+  va_end(valist);
+
+  curl_buffer_delete(curl_buffer);
+  pcre_container_delete(pcre_info);
+
+  return 0;
+}
+
 
 CURL_BUFFER *request(char *url)
 {
@@ -26,7 +84,7 @@ CURL_BUFFER *request(char *url)
   }
 
   curl_easy_setopt(curl_handle, CURLOPT_URL, url);
-  curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 2L);
+  //curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 2L);
   curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
   curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)curl_buffer);
   curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "Chrome");
@@ -35,7 +93,7 @@ CURL_BUFFER *request(char *url)
   // fire up CURL!
   if(curl_easy_perform(curl_handle) != 0)
   {
-    fprintf(stderr, "%s\n", curl_errorbuf);
+    fprintf(stderr, "error: curl_error: %s\n", curl_errorbuf);
     curl_buffer_delete(curl_buffer);
     curl_easy_cleanup(curl_handle);
     curl_global_cleanup();
@@ -173,10 +231,10 @@ int fetch_named_substring(const char *named_substring, PCRE_CONTAINER *pcre_info
 int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)())
 {
   pcre_info->re = pcre_compile(
-    pcre_info->pattern,         // the pattern :)
-    0,                          // default options
-    &(pcre_info->error),        // for errror message
-    &(pcre_info->erroroffset),  // for error offset
+    pcre_info->pattern,            // the pattern :)
+    PCRE_DOTALL|PCRE_NEWLINE_ANY,  // options
+    &(pcre_info->error),           // for errror message
+    &(pcre_info->erroroffset),     // for error offset
     NULL);
 
   if(pcre_info->re==NULL) // regex compile failed, handle error case
@@ -218,8 +276,8 @@ int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)())
   PCRE_INFO_NAMECOUNT,
   &(pcre_info->namecount));
 
-  // We have a match, run callback
-  callback(pcre_info);
+  // We have a match, run callback if one is defined
+  if(callback) callback(pcre_info);
 
   #ifdef DEBUG
     printf("Match succeeded at offset %d\n", pcre_info->ovector[0]);
@@ -376,8 +434,8 @@ int pcre_exec_multi(PCRE_CONTAINER *pcre_info, void (*callback)())
     PCRE_INFO_NAMECOUNT,
     &(pcre_info->namecount));
 
-    // We have a match, run callback
-    callback(pcre_info);
+    // We have a match, run callback if one is defined
+    if(callback) callback(pcre_info);
 
     #ifdef DEBUG
       if(pcre_info->namecount > 0)
