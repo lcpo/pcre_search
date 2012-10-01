@@ -11,19 +11,88 @@
 
 #define OVECCOUNT 30    // for libpcre, should be multiple of 3
 
+list_t *list_new()
+{
+  list_t *list;
+
+  if((list = malloc(sizeof(list_t))) == NULL)
+    return NULL;
+
+  list->id = NULL;
+  list->val = NULL;
+  list->next = NULL;
+
+  return list;
+}
+
+int add_list(list_t *list, char *id, char *val)
+{
+  if(list == NULL)
+    return 1;
+
+  if(list->id != NULL)
+  {
+    while( list->next != NULL )
+    {
+      list = list->next;
+    }
+
+    // now we are at the end of the list
+    if((list->next = list_new()) == NULL)
+      return 1;
+
+    list = list->next;
+  }
+
+  list->id = strdup(id);
+  list->val = strdup(val);
+
+  return 0;
+}
+
+void list_del(list_t *list)
+{
+  list_t *temp;
+  while( list != NULL )
+  {
+    temp = list;
+    list = list->next;
+    free(temp->id);
+    free(temp->val);
+    free(temp);
+  }
+}
+
+list_t *lookup_string(list_t *list, char *id)
+{
+  while( list != NULL )
+  {
+    if(strcmp(id, list->id) == 0) return list;
+    list = list->next;
+  }
+  return NULL;
+}
+
+void ll_puts(list_t *list, char *id)
+{
+  list_t *ret = lookup_string(list, id);
+  if(ret) printf("id: %s val: %s\n", id, ret->val);
+}
+
+
 // curl_pcre_search(url, re, named_subpattern, named_subpattern)
-int curl_pcre_search(char *url, char *re, ...)
+list_t *curl_pcre_search(char *url, char *re, ...)
 {
   // fire up CURL!
   CURL_BUFFER *curl_buffer = request(url);
-  if(!curl_buffer) return 1;
+  if(!curl_buffer) return NULL;
 
   PCRE_CONTAINER *pcre_info = pcre_container_new();
   if(!pcre_info)
   {
     fprintf(stderr,"error: malloc() pcre_container\n");
     curl_buffer_delete(curl_buffer);
-    return 1;
+    return NULL;
   }
 
   pcre_info->buffer = curl_buffer->memory;
@@ -34,7 +103,7 @@ int curl_pcre_search(char *url, char *re, ...)
   {
     curl_buffer_delete(curl_buffer);
     pcre_container_delete(pcre_info);
-    return 1;
+    return NULL;
   }
 
   if(pcre_info->namecount <= 0)
@@ -42,8 +111,10 @@ int curl_pcre_search(char *url, char *re, ...)
     fprintf(stderr, "error: curl_pcre_search() no named substrings in regex\n");
     curl_buffer_delete(curl_buffer);
     pcre_container_delete(pcre_info);
-    return 1;
+    return NULL;
   }
+
+  list_t *list = list_new();
 
   const char *matched_substring = NULL;
   char *ns = NULL;
@@ -55,7 +126,8 @@ int curl_pcre_search(char *url, char *re, ...)
     ns = va_arg(valist, char*);
     if((fetch_named_substring((const char*)ns, pcre_info, &matched_substring)) >= 0)
     {
-      printf("substring match for %s: %s\n", ns, matched_substring);
+      //printf("substring match for %s: %s\n", ns, matched_substring);
+      add_list(list, ns, (char *)matched_substring);
       pcre_free_substring(matched_substring);
     }
   }
@@ -64,7 +136,7 @@ int curl_pcre_search(char *url, char *re, ...)
   curl_buffer_delete(curl_buffer);
   pcre_container_delete(pcre_info);
 
-  return 0;
+  return list;
 }
 
 

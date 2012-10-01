@@ -26,7 +26,20 @@ typedef struct
   int ovector[OVECCOUNT];       // output vector
 } PCRE_CONTAINER;
 
-int curl_pcre_search(char *url, char *re, ...);
+// for linked lists
+typedef struct _list_t_ {
+  char *id;
+  char *val;
+  struct _list_t_ *next;
+} list_t;
+
+list_t *list_new();
+int add_list(list_t *list, char *id, char *val);
+void list_del(list_t *list);
+list_t *lookup_string(list_t *list, char *id);
+void ll_puts(list_t *list, char *id);
+
+list_t *curl_pcre_search(char *url, char *re, ...);
 CURL_BUFFER *request(char *url);
 char *utf8_to_ascii(char *in);
 char *str_replace(char * t1, char * t2, char * t6);
