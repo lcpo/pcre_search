@@ -39,7 +39,7 @@ int curl_pcre_search(char *url, char *re, ...)
 
   if(pcre_info->namecount <= 0)
   {
-    fprintf(stderr, "error: curl_pcre_search() no named substrings in regex");
+    fprintf(stderr, "error: curl_pcre_search() no named substrings in regex\n");
     curl_buffer_delete(curl_buffer);
     pcre_container_delete(pcre_info);
     return 1;
@@ -165,7 +165,7 @@ char *str_replace(char * t1, char * t2, char * t6){
 CURL_BUFFER *curl_buffer_new()
 {
   CURL_BUFFER *b; 
-  if((b = (CURL_BUFFER*)malloc(sizeof *b)) == NULL)
+  if((b = (CURL_BUFFER*)malloc(sizeof(CURL_BUFFER))) == NULL)
     return NULL;
   if((b->memory = (char*)malloc(1)) == NULL)
     return NULL;
@@ -184,7 +184,7 @@ void curl_buffer_delete(CURL_BUFFER *curl_buffer)
 PCRE_CONTAINER *pcre_container_new()
 {
   PCRE_CONTAINER *p;
-  if((p = malloc(sizeof *p)) == NULL)
+  if((p = (PCRE_CONTAINER*)malloc(sizeof(PCRE_CONTAINER))) == NULL)
     return NULL;
   p->re = NULL;
   return p;
@@ -258,7 +258,7 @@ int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)())
     switch(pcre_info->rc)
     {
       case PCRE_ERROR_NOMATCH: puts("No match."); break;
-      default: fprintf(stderr,"error: matching error."); break;
+      default: fprintf(stderr,"error: matching error.\n"); break;
     }
     return 1;
   }
