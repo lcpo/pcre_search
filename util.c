@@ -79,6 +79,21 @@ void ll_puts(list_t *list, char *id)
   if(ret) printf("id: %s val: %s\n", id, ret->val);
 }
 
+// custom callback function to exec on each match
+void pcre_match_callback(PCRE_CONTAINER *pcre_info)
+{
+  // get_named_substring if it exists
+  if(pcre_info->namecount > 0)
+  {
+    const char *matched_substring = NULL;
+
+    if((fetch_named_substring(pcre_info->named_substring, pcre_info, &matched_substring)) >= 0)
+    {
+      printf("substring match for %s: %s\n",pcre_info->named_substring,matched_substring);
+      pcre_free_substring(matched_substring);
+    }
+  }
+}
 
 // curl_pcre_search(url, re, named_subpattern, named_subpattern)
 list_t *curl_pcre_search(char *url, char *re, ...)
@@ -98,14 +113,16 @@ list_t *curl_pcre_search(char *url, char *re, ...)
   pcre_info->buffer = curl_buffer->memory;
   pcre_info->buffer_length = curl_buffer->size;
   pcre_info->pattern = re;
+  pcre_info->named_substring = "url";
 
-  if(pcre_exec_single(pcre_info,NULL))
+  if(pcre_exec_multi(pcre_info,pcre_match_callback))
   {
     curl_buffer_delete(curl_buffer);
     pcre_container_delete(pcre_info);
     return NULL;
   }
 
+  /*
   if(pcre_info->namecount <= 0)
   {
     fprintf(stderr, "error: curl_pcre_search() no named substrings in regex\n");
@@ -113,8 +130,10 @@ list_t *curl_pcre_search(char *url, char *re, ...)
     pcre_container_delete(pcre_info);
     return NULL;
   }
+  */
 
   list_t *list = list_new();
+  /*
 
   const char *matched_substring = NULL;
   char *ns = NULL;
@@ -132,6 +151,7 @@ list_t *curl_pcre_search(char *url, char *re, ...)
     }
   }
   va_end(valist);
+  */
 
   curl_buffer_delete(curl_buffer);
   pcre_container_delete(pcre_info);

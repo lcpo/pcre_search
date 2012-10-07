@@ -38,6 +38,7 @@ int add_list(list_t *list, char *id, char *val);
 void list_del(list_t *list);
 list_t *lookup_string(list_t *list, char *id);
 void ll_puts(list_t *list, char *id);
+void pcre_match_callback(PCRE_CONTAINER *pcre_info);
 
 list_t *curl_pcre_search(char *url, char *re, ...);
 CURL_BUFFER *request(char *url);
