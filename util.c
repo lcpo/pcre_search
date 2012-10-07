@@ -404,8 +404,19 @@ int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)())
       for (i = 0; i < pcre_info->namecount; i++)
       {
         int n = (tabptr[0] << 8) | tabptr[1];
-        printf("(%d) %*s: %.*s\n", n, name_entry_size - 3, tabptr + 2,
-          pcre_info->ovector[2*n+1] - pcre_info->ovector[2*n], pcre_info->buffer + pcre_info->ovector[2*n]);
+        int ns_len = name_entry_size - 3;
+        int ms_len = pcre_info->ovector[2*n+1] - pcre_info->ovector[2*n];
+
+        char *ns = (char*)calloc(ns_len+1,1);
+        char *ms = (char*)calloc(ms_len+1,1);
+        strncpy(ns,(const char*)(tabptr+2), ns_len);
+        strncpy(ms, (const char*)(pcre_info->buffer + pcre_info->ovector[2*n]), ms_len);
+
+        printf("ns: %s ms: %s\n", ns, ms);
+        printf("ns_len: %d ms_len: %d\n", ns_len, ms_len);
+
+        //printf("(%d) %s: %.*s\n", n, tabptr + 2,
+        //  pcre_info->ovector[2*n+1] - pcre_info->ovector[2*n], pcre_info->buffer + pcre_info->ovector[2*n]);
         tabptr += name_entry_size;
       }
     }
