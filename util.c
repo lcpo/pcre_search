@@ -404,15 +404,17 @@ int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)())
       for (i = 0; i < pcre_info->namecount; i++)
       {
         int n = (tabptr[0] << 8) | tabptr[1];
-        int ns_len = name_entry_size - 3;
-        int ms_len = pcre_info->ovector[2*n+1] - pcre_info->ovector[2*n];
 
-        char *ns = (char*)calloc(ns_len+1,1);
-        char *ms = (char*)calloc(ms_len+1,1);
-        strncpy(ns,(const char*)(tabptr+2), ns_len);
+        char *ns = (char*)tabptr+2; // these are null terminated by libpcre (see man pcreapi)
+        int ns_len = (int)strlen(ns);
+
+        int ms_len = pcre_info->ovector[2*n+1] - pcre_info->ovector[2*n];
+        char *ms = (char*)malloc(ms_len);
         strncpy(ms, (const char*)(pcre_info->buffer + pcre_info->ovector[2*n]), ms_len);
+        ms[ms_len] = '\0'; // null terminate new string
 
         printf("ns: %s ms: %s\n", ns, ms);
+        printf("strlen(ns): %d strlen(ms): %d\n", (int)strlen(ns), (int)strlen(ms));
         printf("ns_len: %d ms_len: %d\n", ns_len, ms_len);
 
         //printf("(%d) %s: %.*s\n", n, tabptr + 2,
