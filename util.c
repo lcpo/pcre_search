@@ -409,7 +409,7 @@ int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)())
         int ns_len = (int)strlen(ns);
 
         int ms_len = pcre_info->ovector[2*n+1] - pcre_info->ovector[2*n];
-        char *ms = (char*)malloc(ms_len);
+        char *ms = (char*)malloc(ms_len+1); // ms_len does not include null term
         strncpy(ms, (const char*)(pcre_info->buffer + pcre_info->ovector[2*n]), ms_len);
         ms[ms_len] = '\0'; // null terminate new string
 
