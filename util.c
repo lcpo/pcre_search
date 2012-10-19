@@ -25,28 +25,22 @@ list_t *list_new()
   return list;
 }
 
-int add_list(list_t *list, char *id, char *val)
+int add_node(list_t **list, char *id, char *val)
 {
-  if(list == NULL)
-    return 1;
-
-  if(list->id != NULL)
+  list_t *current_list = *list;
+  if(current_list->id == NULL && current_list->next == NULL)
   {
-    while( list->next != NULL )
-    {
-      list = list->next;
-    }
-
-    // now we are at the end of the list
-    if((list->next = list_new()) == NULL)
-      return 1;
-
-    list = list->next;
+    current_list->id = strdup(id);
+    current_list->val = strdup(val);
+    return 0;
   }
 
-  list->id = strdup(id);
-  list->val = strdup(val);
-
+  list_t *new_list = list_new();
+  //current_list->prev = new_list;
+  new_list->id = strdup(id);
+  new_list->val = strdup(val);
+  new_list->next = current_list;
+  *list = new_list;
   return 0;
 }
 
@@ -80,6 +74,7 @@ void ll_puts(list_t *list, char *id)
 }
 
 // custom callback function to exec on each match
+/*
 void pcre_match_callback(PCRE_CONTAINER *pcre_info)
 {
   // get_named_substring if it exists
@@ -94,6 +89,7 @@ void pcre_match_callback(PCRE_CONTAINER *pcre_info)
     }
   }
 }
+*/
 
 // curl_pcre_search(url, re, named_subpattern, named_subpattern)
 list_t *curl_pcre_search(char *url, char *re, ...)
@@ -113,9 +109,11 @@ list_t *curl_pcre_search(char *url, char *re, ...)
   pcre_info->buffer = curl_buffer->memory;
   pcre_info->buffer_length = curl_buffer->size;
   pcre_info->pattern = re;
-  pcre_info->named_substring = "url";
+  //pcre_info->named_substring = "url";
 
-  if(pcre_exec_multi(pcre_info,pcre_match_callback))
+  list_t *olist = list_new();
+
+  if(pcre_exec_multi(pcre_info,NULL,&olist))
   {
     curl_buffer_delete(curl_buffer);
     pcre_container_delete(pcre_info);
@@ -132,7 +130,6 @@ list_t *curl_pcre_search(char *url, char *re, ...)
   }
   */
 
-  list_t *list = list_new();
   /*
 
   const char *matched_substring = NULL;
@@ -146,7 +143,7 @@ list_t *curl_pcre_search(char *url, char *re, ...)
     if((fetch_named_substring((const char*)ns, pcre_info, &matched_substring)) >= 0)
     {
       //printf("substring match for %s: %s\n", ns, matched_substring);
-      add_list(list, ns, (char *)matched_substring);
+      add_node(&list, ns, (char *)matched_substring);
       pcre_free_substring(matched_substring);
     }
   }
@@ -156,7 +153,7 @@ list_t *curl_pcre_search(char *url, char *re, ...)
   curl_buffer_delete(curl_buffer);
   pcre_container_delete(pcre_info);
 
-  return list;
+  return olist;
 }
 
 
@@ -308,6 +305,7 @@ size_t WriteMemoryCallback(void *contents, size_t size, size_t nmemb, void *user
   return realsize;
 }
 
+/*
 int fetch_named_substring(const char *named_substring, PCRE_CONTAINER *pcre_info, const char **matched_substring)
 {
   int rs = pcre_get_named_substring(
@@ -319,8 +317,9 @@ int fetch_named_substring(const char *named_substring, PCRE_CONTAINER *pcre_info
     matched_substring); // the named substring's match
   return rs;
 }
+*/
 
-int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)())
+int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)(), list_t **olist)
 {
   pcre_info->re = pcre_compile(
     pcre_info->pattern,            // the pattern :)
@@ -406,17 +405,15 @@ int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)())
         int n = (tabptr[0] << 8) | tabptr[1];
 
         char *ns = (char*)tabptr+2; // these are null terminated by libpcre (see man pcreapi)
-        int ns_len = (int)strlen(ns);
 
         int ms_len = pcre_info->ovector[2*n+1] - pcre_info->ovector[2*n];
-        char *ms = (char*)malloc(ms_len+1); // ms_len does not include null term
+        char *ms = (char*)calloc(ms_len+1,1);
         strncpy(ms, (const char*)(pcre_info->buffer + pcre_info->ovector[2*n]), ms_len);
-        ms[ms_len] = '\0'; // null terminate new string
 
         printf("ns: %s ms: %s\n", ns, ms);
-        printf("strlen(ns): %d strlen(ms): %d\n", (int)strlen(ns), (int)strlen(ms));
-        printf("ns_len: %d ms_len: %d\n", ns_len, ms_len);
+        add_node(olist, ns, ms);
 
+        free(ms);
         //printf("(%d) %s: %.*s\n", n, tabptr + 2,
         //  pcre_info->ovector[2*n+1] - pcre_info->ovector[2*n], pcre_info->buffer + pcre_info->ovector[2*n]);
         tabptr += name_entry_size;
@@ -427,9 +424,9 @@ int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)())
   return 0;
 }
 
-int pcre_exec_multi(PCRE_CONTAINER *pcre_info, void (*callback)())
+int pcre_exec_multi(PCRE_CONTAINER *pcre_info, void (*callback)(), list_t **olist)
 {
-  if(pcre_exec_single(pcre_info,callback) > 0)
+  if(pcre_exec_single(pcre_info,callback,olist) > 0)
     return 1;
 
   //XXX do we need this? -->

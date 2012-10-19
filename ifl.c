@@ -29,8 +29,10 @@ int main(int argc, char **argv)
   list = curl_pcre_search(url, "unescapedUrl\":\"(?P<url>[^\"]+)\".*?titleNoFormatting\":\"(?P<title>[^\"]+)\"",
                           "url", "title");
 
-//  ll_puts(list, "url");
-//  ll_puts(list, "title");
+  printf("\n");
+
+  ll_puts(list, "url");
+  ll_puts(list, "title");
 
   list_del(list);
   free(url);
