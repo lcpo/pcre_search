@@ -66,11 +66,22 @@ list_t *lookup_string(list_t *list, char *id)
   }
   return NULL;
 }
-
+/*
 void ll_puts(list_t *list, char *id)
 {
   list_t *ret = lookup_string(list, id);
   if(ret) printf("id: %s val: %s\n", id, ret->val);
+}
+*/
+
+void ll_puts(list_t *list, char *id)
+{
+  while( list != NULL )
+  {
+    if(strcmp(id, list->id) == 0 && list->val != NULL)
+      printf("id: %s val: %s\n", id, list->val);
+    list = list->next;
+  }
 }
 
 // custom callback function to exec on each match
@@ -113,7 +124,7 @@ list_t *curl_pcre_search(char *url, char *re, ...)
 
   list_t *olist = list_new();
 
-  if(pcre_exec_multi(pcre_info,NULL,&olist))
+  if(pcre_exec_single(pcre_info,NULL,&olist))
   {
     curl_buffer_delete(curl_buffer);
     pcre_container_delete(pcre_info);
@@ -371,16 +382,18 @@ int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)(), list_t **oli
   if(callback) callback(pcre_info);
 
   #ifdef DEBUG
-    printf("Match succeeded at offset %d\n", pcre_info->ovector[0]);
+    //printf("Match succeeded at offset %d\n", pcre_info->ovector[0]);
 
     // Show substrings stored in output vector
     int i;
+    /*
     for(i=0;i<(pcre_info->rc);i++)
     {
       char *substring_start = pcre_info->buffer + pcre_info->ovector[2*i];
       int substring_length = pcre_info->ovector[2*i+1] - pcre_info->ovector[2*i];
       printf("%2d: %.*s\n", i, substring_length, substring_start);
     }
+    */
     if(pcre_info->namecount > 0)
     {
       int name_entry_size;
@@ -399,7 +412,7 @@ int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)(), list_t **oli
       &name_table);             // where to put the answer
 
       unsigned char *tabptr = name_table;
-      printf("Named substrings\n");
+      //printf("Named substrings\n");
       for (i = 0; i < pcre_info->namecount; i++)
       {
         int n = (tabptr[0] << 8) | tabptr[1];
@@ -410,7 +423,7 @@ int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)(), list_t **oli
         char *ms = (char*)calloc(ms_len+1,1);
         strncpy(ms, (const char*)(pcre_info->buffer + pcre_info->ovector[2*n]), ms_len);
 
-        printf("ns: %s ms: %s\n", ns, ms);
+        //printf("ns: %s ms: %s\n", ns, ms);
         add_node(olist, ns, ms);
 
         free(ms);
@@ -519,15 +532,17 @@ int pcre_exec_multi(PCRE_CONTAINER *pcre_info, void (*callback)(), list_t **olis
       // As before, show substrings stored in the output vector
       // by number, and then also any named substrings.
 
-      printf("\nMatch succeeded again at offset %d\n", pcre_info->ovector[0]);
+      //printf("\nMatch succeeded again at offset %d\n", pcre_info->ovector[0]);
 
       int i;
+      /*
       for (i = 0; i < pcre_info->rc; i++)
       {
         char *substring_start = pcre_info->buffer + pcre_info->ovector[2*i];
         int substring_length = pcre_info->ovector[2*i+1] - pcre_info->ovector[2*i];
         printf("%2d: %.*s\n", i, substring_length, substring_start);
       }
+      */
     #endif
 
     (void)pcre_fullinfo(
@@ -558,12 +573,23 @@ int pcre_exec_multi(PCRE_CONTAINER *pcre_info, void (*callback)(), list_t **olis
         &name_table);             // where to put the answer
 
         unsigned char *tabptr = name_table;
-        printf("Named substrings\n");
+        //printf("Named substrings\n");
         for (i = 0; i < pcre_info->namecount; i++)
         {
           int n = (tabptr[0] << 8) | tabptr[1];
-          printf("(%d) %*s: %.*s\n", n, name_entry_size - 3, tabptr + 2,
-            pcre_info->ovector[2*n+1] - pcre_info->ovector[2*n], pcre_info->buffer + pcre_info->ovector[2*n]);
+
+          char *ns = (char*)tabptr+2; // these are null terminated by libpcre (see man pcreapi)
+
+          int ms_len = pcre_info->ovector[2*n+1] - pcre_info->ovector[2*n];
+          char *ms = (char*)calloc(ms_len+1,1);
+          strncpy(ms, (const char*)(pcre_info->buffer + pcre_info->ovector[2*n]), ms_len);
+
+          //printf("ns: %s ms: %s\n", ns, ms);
+          add_node(olist, ns, ms);
+          free(ms);
+
+          //printf("(%d) %*s: %.*s\n", n, name_entry_size - 3, tabptr + 2,
+          //  pcre_info->ovector[2*n+1] - pcre_info->ovector[2*n], pcre_info->buffer + pcre_info->ovector[2*n]);
           tabptr += name_entry_size;
         }
       }
