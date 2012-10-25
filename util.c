@@ -25,9 +25,58 @@ list_t *list_new()
   return list;
 }
 
-int add_node(list_t **list, char *id, char *val)
+list_container_t *list_container_new()
 {
-  list_t *current_list = *list;
+  list_container_t *list_container;
+
+  if((list_container = malloc(sizeof(list_container_t))) == NULL)
+    return NULL;
+
+  list_container->id = NULL;
+  list_container->val = NULL;
+  list_container->next = NULL;
+
+  return list_container;
+}
+
+int add_list(list_container_t **list_container)
+{
+  list_container_t *current_list_container = *list_container;
+  if(current_list_container->id == NULL && current_list_container->next == NULL)
+  {
+    int *id = malloc(sizeof(int));
+    *id = 1;
+    current_list_container->id = id;
+    current_list_container->val = list_new();
+    return *id;
+  }
+
+  list_container_t *new_list_container = list_container_new();
+  int *id = malloc(sizeof(int));
+  *id = *(current_list_container->id)+1;
+  new_list_container->id = id;
+  new_list_container->val = list_new();
+  new_list_container->next = current_list_container;
+  *list_container = new_list_container;
+  return *id;
+}
+
+list_container_t *find_container(list_container_t *list_container, int container_id)
+{
+  while( list_container != NULL && list_container->id != NULL)
+  {
+    if(container_id == *(list_container->id))  return list_container;
+    list_container = list_container->next;
+  }
+  return NULL;
+}
+
+int add_node(list_container_t *list_container, int container_id, char *id, char *val)
+{
+  list_container_t *specified_container = find_container(list_container, container_id);
+  if(specified_container == NULL || specified_container->val == NULL) return 1;
+
+  list_t *current_list = specified_container->val;
   if(current_list->id == NULL && current_list->next == NULL)
   {
     current_list->id = strdup(id);
@@ -36,11 +85,10 @@ int add_node(list_t **list, char *id, char *val)
   }
 
   list_t *new_list = list_new();
-  //current_list->prev = new_list;
   new_list->id = strdup(id);
   new_list->val = strdup(val);
   new_list->next = current_list;
-  *list = new_list;
+  specified_container->val = new_list;
   return 0;
 }
 
@@ -57,32 +105,31 @@ void list_del(list_t *list)
   }
 }
 
-list_t *lookup_string(list_t *list, char *id)
+void list_container_del(list_container_t *list_container)
 {
-  while( list != NULL )
+  list_container_t *temp;
+  while( list_container != NULL )
   {
-    if(strcmp(id, list->id) == 0) return list;
-    list = list->next;
+    temp = list_container;
+    list_container = list_container->next;
+    free(temp->id);
+    list_del(temp->val);
+    free(temp);
   }
-  return NULL;
 }
-/*
-void ll_puts(list_t *list, char *id)
-{
-  list_t *ret = lookup_string(list, id);
-  if(ret) printf("id: %s val: %s\n", id, ret->val);
-}
-*/
 
-void ll_puts(list_t *list, char *id)
+void print_container(list_container_t *list_container, int container_id)
 {
-  while( list != NULL )
+  list_container_t *specified_container = find_container(list_container, container_id);
+  if(specified_container == NULL || specified_container->val == NULL) return;
+  list_t *list = specified_container->val;
+  while( list != NULL && list->id != NULL )
   {
-    if(strcmp(id, list->id) == 0 && list->val != NULL)
-      printf("id: %s val: %s\n", id, list->val);
-    list = list->next;
+    printf("container: %d id: %s val: %s\n", container_id, list->id, list->val);
+    list=list->next;
   }
 }
+
 
 // custom callback function to exec on each match
 /*
@@ -103,7 +150,7 @@ void pcre_match_callback(PCRE_CONTAINER *pcre_info)
 */
 
 // curl_pcre_search(url, re, named_subpattern, named_subpattern)
-list_t *curl_pcre_search(char *url, char *re, ...)
+list_container_t *curl_pcre_search(char *url, char *re, ...)
 {
   // fire up CURL!
   CURL_BUFFER *curl_buffer = request(url);
@@ -122,9 +169,9 @@ list_t *curl_pcre_search(char *url, char *re, ...)
   pcre_info->pattern = re;
   //pcre_info->named_substring = "url";
 
-  list_t *olist = list_new();
+  list_container_t *olist = list_container_new();
 
-  if(pcre_exec_single(pcre_info,NULL,&olist))
+  if(pcre_exec_multi(pcre_info,NULL,&olist))
   {
     curl_buffer_delete(curl_buffer);
     pcre_container_delete(pcre_info);
@@ -330,7 +377,7 @@ int fetch_named_substring(const char *named_substring, PCRE_CONTAINER *pcre_info
 }
 */
 
-int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)(), list_t **olist)
+int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)(), list_container_t **olist)
 {
   pcre_info->re = pcre_compile(
     pcre_info->pattern,            // the pattern :)
@@ -380,6 +427,7 @@ int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)(), list_t **oli
 
   // We have a match, run callback if one is defined
   if(callback) callback(pcre_info);
+  printf("Container: %d allocated.\n",add_list(olist));
 
   #ifdef DEBUG
     //printf("Match succeeded at offset %d\n", pcre_info->ovector[0]);
@@ -424,9 +472,9 @@ int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)(), list_t **oli
         strncpy(ms, (const char*)(pcre_info->buffer + pcre_info->ovector[2*n]), ms_len);
 
         //printf("ns: %s ms: %s\n", ns, ms);
-        add_node(olist, ns, ms);
-
+        add_node(*olist, 1, ns, ms);
         free(ms);
+
         //printf("(%d) %s: %.*s\n", n, tabptr + 2,
         //  pcre_info->ovector[2*n+1] - pcre_info->ovector[2*n], pcre_info->buffer + pcre_info->ovector[2*n]);
         tabptr += name_entry_size;
@@ -437,11 +485,12 @@ int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)(), list_t **oli
   return 0;
 }
 
-int pcre_exec_multi(PCRE_CONTAINER *pcre_info, void (*callback)(), list_t **olist)
+int pcre_exec_multi(PCRE_CONTAINER *pcre_info, void (*callback)(), list_container_t **olist)
 {
   if(pcre_exec_single(pcre_info,callback,olist) > 0)
     return 1;
 
+  int match_number;
   //XXX do we need this? -->
   int utf8;
   unsigned int option_bits;
@@ -553,6 +602,8 @@ int pcre_exec_multi(PCRE_CONTAINER *pcre_info, void (*callback)(), list_t **olis
 
     // We have a match, run callback if one is defined
     if(callback) callback(pcre_info);
+    match_number = add_list(olist);
+    printf("Container: %d allocated.\n",match_number);
 
     #ifdef DEBUG
       if(pcre_info->namecount > 0)
@@ -585,7 +636,7 @@ int pcre_exec_multi(PCRE_CONTAINER *pcre_info, void (*callback)(), list_t **olis
           strncpy(ms, (const char*)(pcre_info->buffer + pcre_info->ovector[2*n]), ms_len);
 
           //printf("ns: %s ms: %s\n", ns, ms);
-          add_node(olist, ns, ms);
+          add_node(*olist, match_number, ns, ms);
           free(ms);
 
           //printf("(%d) %*s: %.*s\n", n, name_entry_size - 3, tabptr + 2,
@@ -599,3 +650,27 @@ int pcre_exec_multi(PCRE_CONTAINER *pcre_info, void (*callback)(), list_t **olis
   return 0;
 }
 
+/*
+int main(int argc, char **argv)
+{
+  list_container_t *list_container = list_container_new();
+  printf("Container: %d allocated.\n",add_list(&list_container));
+  printf("Container: %d allocated.\n",add_list(&list_container));
+
+  add_node(list_container, 1, "1", "one in container 1");
+  add_node(list_container, 1, "2", "two in container 1");
+  add_node(list_container, 1, "3", "three in container 1");
+
+  add_node(list_container, 2, "1", "one in container 2");
+  add_node(list_container, 2, "2", "two in container 2");
+  add_node(list_container, 2, "3", "three in container 2");
+
+  print_container(list_container, 1);
+  printf("\n");
+  print_container(list_container, 2);
+
+
+  list_container_del(list_container);
+  return 0;
+}
+*/

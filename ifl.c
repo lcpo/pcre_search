@@ -24,17 +24,20 @@ int main(int argc, char **argv)
     sprintf(url, "%s+%s", url, argv[i]);
   }
 
-  list_t *list;
+  list_container_t *list;
 
   list = curl_pcre_search(url, "unescapedUrl\":\"(?P<url>[^\"]+)\".*?titleNoFormatting\":\"(?P<title>[^\"]+)\"",
                           "url", "title");
 
   printf("\n");
+  print_container(list, 1);
+  print_container(list, 2);
+  print_container(list, 3);
+  print_container(list, 4);
+  print_container(list, 5);
+  print_container(list, 6);
 
-  ll_puts(list, "url");
-  ll_puts(list, "title");
-
-  list_del(list);
+  list_container_del(list);
   free(url);
 
   return 0;
