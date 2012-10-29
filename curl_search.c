@@ -33,15 +33,20 @@ int main(int argc, char **argv) {
 
 //  curl_pcre_search("http://thefuckingweather.com/?where=21044", "<span class=\"temperature\"[^>]+>(?P<temp>[^<]+)</span>.*?<p class=\"remark\">(?P<remark>[^<]+)</p>.*?<p class=\"flavor\">(?P<flavortext>[^<]+)</p>", "temp", "remark", "flavortext");
 
-list_t *list;
+if(argc<3)
+{
+  puts("Usage: curl_search [url] [pattern]");
+  return 1;
+}
 
-list = curl_pcre_search("http://thefuckingweather.com/?where=21044", "<span class=\"temperature\"[^>]+>(?P<temp>[^<]+)</span>.*?<p class=\"remark\">(?P<remark>[^<]+)</p>.*?<p class=\"flavor\">(?P<flavortext>[^<]+)</p>", "temp", "remark", "flavortext");
 
-ll_puts(list, "temp");
-ll_puts(list, "remark");
-ll_puts(list, "flavortext");
+list_container_t *list;
 
-list_del(list);
+list = curl_pcre_search(argv[1],argv[2]);
+
+print_containers(list);
+
+list_container_del(list);
 
 /*
   // check cli args

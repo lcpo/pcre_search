@@ -26,16 +26,10 @@ int main(int argc, char **argv)
 
   list_container_t *list;
 
-  list = curl_pcre_search(url, "unescapedUrl\":\"(?P<url>[^\"]+)\".*?titleNoFormatting\":\"(?P<title>[^\"]+)\"",
-                          "url", "title");
+  list = curl_pcre_search(url, "unescapedUrl\":\"(?P<url>[^\"]+)\".*?titleNoFormatting\":\"(?P<title>[^\"]+)\"");
 
   printf("\n");
-  print_container(list, 1);
-  print_container(list, 2);
-  print_container(list, 3);
-  print_container(list, 4);
-  print_container(list, 5);
-  print_container(list, 6);
+  print_containers(list);
 
   list_container_del(list);
   free(url);

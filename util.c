@@ -130,6 +130,22 @@ void print_container(list_container_t *list_container, int container_id)
   }
 }
 
+void print_containers(list_container_t *list_container)
+{
+  int container_id;
+  while( list_container != NULL && list_container->val != NULL )
+  {
+    container_id = *(list_container->id);
+    list_t *list = list_container->val;
+    while( list != NULL && list->id != NULL )
+    {
+      printf("container: %d id: %s val: %s\n", container_id, list->id, list->val);
+      list = list->next;
+    }
+    list_container = list_container->next;
+  }
+}
+
 
 // custom callback function to exec on each match
 /*
@@ -150,7 +166,7 @@ void pcre_match_callback(PCRE_CONTAINER *pcre_info)
 */
 
 // curl_pcre_search(url, re, named_subpattern, named_subpattern)
-list_container_t *curl_pcre_search(char *url, char *re, ...)
+list_container_t *curl_pcre_search(char *url, char *re)
 {
   // fire up CURL!
   CURL_BUFFER *curl_buffer = request(url);
@@ -427,9 +443,10 @@ int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)(), list_contain
 
   // We have a match, run callback if one is defined
   if(callback) callback(pcre_info);
-  printf("Container: %d allocated.\n",add_list(olist));
+  add_list(olist);
+  //printf("Container: %d allocated.\n",container_no);
 
-  #ifdef DEBUG
+  //#ifdef DEBUG
     //printf("Match succeeded at offset %d\n", pcre_info->ovector[0]);
 
     // Show substrings stored in output vector
@@ -480,7 +497,7 @@ int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)(), list_contain
         tabptr += name_entry_size;
       }
     }
-  #endif
+  //#endif
 
   return 0;
 }
@@ -577,7 +594,7 @@ int pcre_exec_multi(PCRE_CONTAINER *pcre_info, void (*callback)(), list_containe
       printf("ovector only has room for %d captured substrings\n", pcre_info->rc -1);
     }
 
-    #ifdef DEBUG
+    //#ifdef DEBUG
       // As before, show substrings stored in the output vector
       // by number, and then also any named substrings.
 
@@ -592,7 +609,7 @@ int pcre_exec_multi(PCRE_CONTAINER *pcre_info, void (*callback)(), list_containe
         printf("%2d: %.*s\n", i, substring_length, substring_start);
       }
       */
-    #endif
+    //#endif
 
     (void)pcre_fullinfo(
     pcre_info->re,
@@ -603,9 +620,9 @@ int pcre_exec_multi(PCRE_CONTAINER *pcre_info, void (*callback)(), list_containe
     // We have a match, run callback if one is defined
     if(callback) callback(pcre_info);
     match_number = add_list(olist);
-    printf("Container: %d allocated.\n",match_number);
+    //printf("Container: %d allocated.\n",match_number);
 
-    #ifdef DEBUG
+    //#ifdef DEBUG
       if(pcre_info->namecount > 0)
       {
         int name_entry_size;
@@ -644,7 +661,7 @@ int pcre_exec_multi(PCRE_CONTAINER *pcre_info, void (*callback)(), list_containe
           tabptr += name_entry_size;
         }
       }
-    #endif
+    //#endif
   }      /* End of loop to find second and subsequent matches */
 
   return 0;

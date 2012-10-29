@@ -46,9 +46,10 @@ int add_node(list_container_t *list_container, int container_id, char *id, char 
 void list_del(list_t *list);
 void list_container_del(list_container_t *list_container);
 void print_container(list_container_t *list_container, int container_id);
+void print_containers(list_container_t *list_container);
 
 //void pcre_match_callback(PCRE_CONTAINER *pcre_info);
-list_container_t *curl_pcre_search(char *url, char *re, ...);
+list_container_t *curl_pcre_search(char *url, char *re);
 CURL_BUFFER *request(char *url);
 char *utf8_to_ascii(char *in);
 char *str_replace(char * t1, char * t2, char * t6);

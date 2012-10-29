@@ -5,4 +5,4 @@ if [ ! "$1" ]; then
   exit 1
 fi
 
-../curl_search "http://thefuckingweather.com/?where=$1" "<p\sclass=\"flavor\">(?P<flavortext>[^<]+?)</p>" flavortext
+../curl_search "http://thefuckingweather.com/?where=$1" "<p\sclass=\"flavor\">(?P<flavortext>[^<]+?)</p>"
