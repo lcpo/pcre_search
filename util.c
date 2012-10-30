@@ -233,7 +233,7 @@ list_container_t *curl_pcre_search(char *url, char *re)
 
 CURL_BUFFER *request(char *url)
 {
-  curl_global_init(CURL_GLOBAL_NOTHING);
+  curl_global_init(CURL_GLOBAL_SSL);
   CURL *curl_handle = curl_easy_init();
   char curl_errorbuf[CURL_ERROR_SIZE];
 
@@ -248,6 +248,9 @@ CURL_BUFFER *request(char *url)
 
   curl_easy_setopt(curl_handle, CURLOPT_URL, url);
   //curl_easy_setopt(curl_handle, CURLOPT_TIMEOUT, 2L);
+  curl_easy_setopt(curl_handle, CURLOPT_NOPROGRESS, 1L);
+  curl_easy_setopt(curl_handle, CURLOPT_FOLLOWLOCATION, 1L); // this will follow 301 redirects
+  curl_easy_setopt(curl_handle, CURLOPT_MAXREDIRS, 1L);
   curl_easy_setopt(curl_handle, CURLOPT_WRITEFUNCTION, WriteMemoryCallback);
   curl_easy_setopt(curl_handle, CURLOPT_WRITEDATA, (void *)curl_buffer);
   curl_easy_setopt(curl_handle, CURLOPT_USERAGENT, "Chrome");
