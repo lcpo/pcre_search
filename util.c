@@ -2,14 +2,81 @@
 #include <stdlib.h>     // calloc,free,exit,etc.
 #include <stdarg.h>     // va_list
 #include <string.h>     // strlen
-#include <iconv.h>	// utf conversion
+#include <iconv.h>      // utf conversion
 #include <sys/types.h>  // size_t
+#include <ctype.h>      // iscntrl,isxdigit
 #include <pcre.h>       // libpcre
 #include <curl/curl.h>  // libcurl
 
 #include "util.h"       // WriteMemoryCallback,pcrecontainer structs
 
 #define OVECCOUNT 30    // for libpcre, should be multiple of 3
+
+int is_utf(char *string) {
+    if (!isxdigit(string[0])) { return 0; }
+    if (!isxdigit(string[1])) { return 0; }
+    if (!isxdigit(string[2])) { return 0; }
+    if (!isxdigit(string[3])) { return 0; }
+    return 1;
+}
+
+char *parse_escaped_characters(char *string) {
+  char *output_string = (char*)malloc(strlen(string) + 1);
+  char *output_string_ptr = output_string;
+  char *string_ptr = string;
+  char current_char;
+  unsigned int utf_val;
+  void *reallocated_ptr;
+  if (!output_string) { return NULL; }
+  while (*string_ptr) {
+      current_char = *string_ptr;
+      if (current_char == '\\') {
+          string_ptr++;
+          current_char = *string_ptr;
+          switch (current_char) {
+              case '\"': case '\\': case '/': break;
+              case 'b': current_char = '\b'; break;
+              case 'f': current_char = '\f'; break;
+              case 'n': current_char = '\n'; break;
+              case 'r': current_char = '\r'; break;
+              case 't': current_char = '\t'; break;
+              case 'u':
+                  string_ptr++;
+                  if (!is_utf(string_ptr) ||
+                          sscanf(string_ptr, "%4x", &utf_val) == EOF) {
+                      free(output_string); return NULL;
+                  }
+                  if (utf_val < 0x80) {
+                      current_char = utf_val;
+                  } else if (utf_val < 0x800) {
+                      *output_string_ptr++ = (utf_val >> 6) | 0xC0;
+                      current_char = ((utf_val | 0x80) & 0xBF);
+                  } else {
+                      *output_string_ptr++ = (utf_val >> 12) | 0xE0;
+                      *output_string_ptr++ = (((utf_val >> 6) | 0x80) & 0xBF);
+                      current_char = ((utf_val | 0x80) & 0xBF);
+                  }
+                  string_ptr += 3;
+                  break;
+              default:
+                free(output_string);
+                return NULL;
+                break;
+          }
+      } else if (iscntrl(current_char)) { /* no control characters allowed */
+          free(output_string);
+          return NULL;
+      }
+      *output_string_ptr = current_char;
+      output_string_ptr++;
+      string_ptr++;
+  }
+  *output_string_ptr = '\0';
+  reallocated_ptr = realloc(output_string, strlen(output_string) + 1);
+  if (!reallocated_ptr) { free(output_string); return NULL; }
+  output_string = (char*)reallocated_ptr;
+  return output_string;
+}
 
 list_t *list_new()
 {
@@ -139,7 +206,7 @@ void print_containers(list_container_t *list_container)
     list_t *list = list_container->val;
     while( list != NULL && list->id != NULL )
     {
-      printf("container: %d id: %s val: %s\n", container_id, list->id, list->val);
+      printf("container: %-3d id: %-12s val: %s\n", container_id, list->id, list->val);
       list = list->next;
     }
     list_container = list_container->next;
@@ -491,6 +558,14 @@ int pcre_exec_single(PCRE_CONTAINER *pcre_info, void (*callback)(), list_contain
         char *ms = (char*)calloc(ms_len+1,1);
         strncpy(ms, (const char*)(pcre_info->buffer + pcre_info->ovector[2*n]), ms_len);
 
+        // cleanup escaped characters from matched subpattern if found
+        char *temp = ms;
+        if(strstr(temp, "\\") != NULL)
+        {
+          ms = parse_escaped_characters(temp);
+          free(temp);
+        }
+
         //printf("ns: %s ms: %s\n", ns, ms);
         add_node(*olist, 1, ns, ms);
         free(ms);
@@ -654,6 +729,14 @@ int pcre_exec_multi(PCRE_CONTAINER *pcre_info, void (*callback)(), list_containe
           int ms_len = pcre_info->ovector[2*n+1] - pcre_info->ovector[2*n];
           char *ms = (char*)calloc(ms_len+1,1);
           strncpy(ms, (const char*)(pcre_info->buffer + pcre_info->ovector[2*n]), ms_len);
+
+          // cleanup escaped characters from matched subpattern
+          char *temp = ms;
+          if(strstr(temp, "\\") != NULL)
+          {
+            ms = parse_escaped_characters(temp);
+            free(temp);
+          }
 
           //printf("ns: %s ms: %s\n", ns, ms);
           add_node(*olist, match_number, ns, ms);

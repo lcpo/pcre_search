@@ -38,6 +38,9 @@ typedef struct
   int ovector[OVECCOUNT];       // output vector
 } PCRE_CONTAINER;
 
+int is_utf(char *string);
+char *parse_escaped_characters(char *string);
+
 list_t *list_new();
 list_container_t *list_container_new();
 int add_list(list_container_t **list_container);
