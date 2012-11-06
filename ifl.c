@@ -26,7 +26,7 @@ int main(int argc, char **argv)
 
   list_container_t *list;
 
-  list = curl_pcre_search(url, "unescapedUrl\":\"(?P<url>[^\"]+)\".*?titleNoFormatting\":\"(?P<title>[^\"]+)\"");
+  list = curl_pcre_search(url, "unescapedUrl\":\"(?P<url>[^\"]+)\".*?titleNoFormatting\":\"(?P<title>[^\"]+)\",\"content\":\"(?P<content>[^\"]+)\"");
 
   printf("\n");
   print_containers(list);
