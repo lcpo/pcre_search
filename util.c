@@ -140,20 +140,27 @@ list_container_t *find_container(list_container_t *list_container, int container
 
 int add_node(list_container_t *list_container, int container_id, char *id, char *val)
 {
+  if(id == NULL || val == NULL)
+  {
+    //fprintf(stderr,"Error: add_node() id or val was null\n");
+    return 0;
+  }
+
+
   list_container_t *specified_container = find_container(list_container, container_id);
   if(specified_container == NULL || specified_container->val == NULL) return 1;
 
   list_t *current_list = specified_container->val;
   if(current_list->id == NULL && current_list->next == NULL)
   {
-    current_list->id = strdup(id);
-    current_list->val = strdup(val);
+    current_list->id = strndup(id,5000);
+    current_list->val = strndup(val,5000);
     return 0;
   }
 
   list_t *new_list = list_new();
-  new_list->id = strdup(id);
-  new_list->val = strdup(val);
+  new_list->id = strndup(id,5000);
+  new_list->val = strndup(val,5000);
   new_list->next = current_list;
   specified_container->val = new_list;
   return 0;
